@@ -1,0 +1,57 @@
+{
+	"name": "SftpSourceCSV",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SftpSourceStorage",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"KeyvaultName": {
+					"value": "@dataset().KeyvaultName",
+					"type": "Expression"
+				},
+				"AKVsecretName": {
+					"value": "@dataset().AKVsecretName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"KeyvaultName": {
+				"type": "string"
+			},
+			"AKVsecretName": {
+				"type": "string"
+			},
+			"delimiter": {
+				"type": "string"
+			},
+			"header": {
+				"type": "bool"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"folderPath": "/upload"
+			},
+			"columnDelimiter": {
+				"value": "@dataset().delimiter",
+				"type": "Expression"
+			},
+			"escapeChar": "\\",
+			"firstRowAsHeader": {
+				"value": "@dataset().header",
+				"type": "Expression"
+			},
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "Car;MPG;Cylinders;Displacement;Horsepower;Weight;Acceleration;Model;Origin",
+				"type": "String"
+			}
+		]
+	}
+}

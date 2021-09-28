@@ -1,0 +1,3 @@
+type,name,path,value
+factory,adf-hof-dev-71208,"$.properties.globalParameters.keyvault_name.value",$($Env:ADFTSTKEYVAULT)
+trigger,TR_RegisterNewDatalakeFiles,"$.properties.typeProperties.scope","/subscriptions/aad340c5-55fb-4951-a714-15c1b4a6e3b3/resourceGroups/rg-adls-hof-tst-42231/providers/Microsoft.Storage/storageAccounts/strtstmain42231"

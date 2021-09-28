@@ -1,0 +1,823 @@
+{
+	"name": "File Extraction - BLOB - CSV",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Filename patterns",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT\t ds.KeyVaultName\n\t\t,src.BaseUrlSecret AS SourceBaseUrlSecret\n\t\t--,src.UsernameSecretName AS SourceUsernameSecretName\n\t\t,src.PasswordSecretName AS SourceAccessKey\n                ,src.container AS SourceContainer\n                ,fdsrc.SourceDirectory\tAS SourceDirectory\n                ,fdsrc.FileDefinitionId   AS FileDefinitionId\n                ,fdsrc.SourceColumnDelimiter\tAS Delimiter\t\n                ,fdsrc.SourceFirstRowAsHeader   AS Header\n\t\t,snk.Container\t\t\tAS SinkContainer\n                ,snk.BaseUrlSecret\t\tAS SinkBaseUrlSecret\n\t\t,fdsnk.SinkDirectory\tAS SinkDirectory\n\t\t,fdsnk.SinkFileName\t\tAS FileNamePattern\n\nFROM config.Mapping AS m\nINNER JOIN config.Connections AS src\n\t\tON m.SourceConnectionId = src.ConnectionId\n\t\tAND m.FlowId = @{pipeline().parameters.FlowId}\n\t\tAND src.ConnectionType = 'Datalake'\n\t\tAND m.IsActive = 1\n\nINNER JOIN config.Connections AS snk\n\t\tON m.SinkConnectionId = snk.ConnectionId\n\t\tAND m.FlowId = @{pipeline().parameters.FlowId}\n\t\tAND m.IsActive = 1\nINNER JOIN [config].[FileDefinition] AS fdsnk\t\t-- File is sink\n\t\tON m.SinkFileDefinitionId = fdsnk.FileDefinitionId\nINNER JOIN [config].[FileDefinition] AS fdsrc\t\t-- File is source\n\t\tON m.SourceFileDefinitionId = fdsrc.FileDefinitionId\n                AND fdsrc.SourceFileType = 'csv'\nLEFT JOIN [config].[DAPServices] AS ds\n\t\tON 1=1",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@variables('init')",
+								"type": "Expression"
+							},
+							"KeyvaultName": {
+								"value": "@pipeline().globalParameters.keyvault_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "For Each Filename pattern",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Filename patterns",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Filename patterns').output.value\n",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy data1",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "SinkBaseUrl",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "SourceBaseUrl",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Set variable2",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"maxConcurrentConnections": 1,
+										"recursive": false,
+										"wildcardFileName": {
+											"value": "@{concat(item().FileNamePattern,'*.csv')}",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"maxConcurrentConnections": 1
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "StorageSourceCSV",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileSystem": {
+											"value": "@{item().SourceContainer}",
+											"type": "Expression"
+										},
+										"Directory": {
+											"value": "@{item().SourceDirectory}",
+											"type": "Expression"
+										},
+										"delimiter": {
+											"value": "@{item().Delimiter}",
+											"type": "Expression"
+										},
+										"header": {
+											"value": "@{item().Header}",
+											"type": "Expression"
+										},
+										"BaseUrl": {
+											"value": "@activity('SourceBaseUrl').output.value",
+											"type": "Expression"
+										},
+										"KeySecretName": {
+											"value": "@{item().SourceAccessKey}",
+											"type": "Expression"
+										},
+										"KeyvaultName": {
+											"value": "@item().KeyVaultName",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DatalakeSinkCSV",
+									"type": "DatasetReference",
+									"parameters": {
+										"BaseUrl": {
+											"value": "@activity('SinkBaseUrl').output.value",
+											"type": "Expression"
+										},
+										"FileSystem": {
+											"value": "@{item().SinkContainer}",
+											"type": "Expression"
+										},
+										"Directory": {
+											"value": "@{item().SinkDirectory}",
+											"type": "Expression"
+										},
+										"Delimiter": {
+											"value": "@{item().Delimiter}",
+											"type": "Expression"
+										},
+										"Header": {
+											"value": "@{item().Header}",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "SinkBaseUrl",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SinkBaseUrlSecret,'/?api-version=7.0')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						},
+						{
+							"name": "Get FileNames",
+							"type": "GetMetadata",
+							"dependsOn": [
+								{
+									"activity": "Copy data1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "StorageSourceCSV",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileSystem": {
+											"value": "@{item().SourceContainer}",
+											"type": "Expression"
+										},
+										"Directory": {
+											"value": "@{item().SourceDirectory}",
+											"type": "Expression"
+										},
+										"delimiter": {
+											"value": "@{item().Delimiter}",
+											"type": "Expression"
+										},
+										"header": {
+											"value": "@{item().Header}",
+											"type": "Expression"
+										},
+										"BaseUrl": {
+											"value": "@activity('SourceBaseUrl').output.value",
+											"type": "Expression"
+										},
+										"KeySecretName": {
+											"value": "@{item().SourceAccessKey}",
+											"type": "Expression"
+										},
+										"KeyvaultName": {
+											"value": "@{item().KeyVaultName}",
+											"type": "Expression"
+										}
+									}
+								},
+								"fieldList": [
+									"childItems"
+								],
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							}
+						},
+						{
+							"name": "Filter1",
+							"type": "Filter",
+							"dependsOn": [
+								{
+									"activity": "Get FileNames",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"items": {
+									"value": "@activity('Get FileNames').output.childitems",
+									"type": "Expression"
+								},
+								"condition": {
+									"value": "@and(startswith(item().name,variables('FileName Patern')),endswith(item().name,'.csv'))\n",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set variable2",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "FileName Patern",
+								"value": {
+									"value": "@item().FileNamePattern",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Register Actual FileNames",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Filter1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Register FileNames",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"FileNames": {
+										"value": "@activity('Filter1').output.value",
+										"type": "Expression"
+									},
+									"AdfPipelineRunId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@item().SinkDirectory",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "SourceBaseUrl",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SourceBaseUrlSecret,'/?api-version=7.0')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get list of all files to process",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "For Each Filename pattern",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select ds.KeyVaultName as KeyVaultName\n, connSnk.[BaseUrlSecret] as SinkBaseUrlSecret\n, connSnk.[Container] as FileSystem\n, lf.[filename]as ActualFileName\n, lf.logFilesId as LogFilesId\n, fd.FileDefinitionId as FileDefinitionId\n, fd.SinkDirectory as Directory\n, fd.SourceColumnDelimiter as Delimiter\n, fd.SourceFirstRowAsHeader as Header\nfrom [config].[filedefinition] as fd \njoin [log].[file] as lf\non lf.[filename] like fd.filenamepattern + '%.csv'\nand fd.SourceFileType = 'csv'\nand lf.status = 'ToExtract'\nand lf.AdfPipelineRunId = '@{pipeline().RunId}'\njoin [config].[Mapping] as m\non fd.[fileDefinitionId] = m.[SourceFileDefinitionId]\njoin [config].[Connections] as connSnk\non connSnk.ConnectionId = m.[SinkConnectionId]\njoin  [config].[Connections] as connSrc\non connSrc.ConnectionId = m.[SourceConnectionId]\nAND m.FlowId = @{pipeline().parameters.FlowId}\nAND connSrc.ConnectionType = 'Datalake'\nAND m.IsActive = 1\nLEFT JOIN [config].[DAPServices] AS ds\non 1=1\n\n\n",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@variables('init')",
+								"type": "Expression"
+							},
+							"KeyvaultName": {
+								"value": "@pipeline().globalParameters.keyvault_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach file",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get list of all files to process",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get list of all files to process').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "BaseUrl",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SinkBaseUrlSecret,'/?api-version=7.0')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						},
+						{
+							"name": "Copy data2",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Lookup ADF Mapping for file",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"value": "@json(activity('Lookup ADF Mapping for file').output.firstrow.AdfColumnMapping)",
+									"type": "Expression"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "DatalakeLandingCSV",
+									"type": "DatasetReference",
+									"parameters": {
+										"BaseUrl": {
+											"value": "@activity('BaseUrl').output.value",
+											"type": "Expression"
+										},
+										"FileSystem": {
+											"value": "@item().FileSystem",
+											"type": "Expression"
+										},
+										"Directory": {
+											"value": "@item().Directory",
+											"type": "Expression"
+										},
+										"Delimiter": {
+											"value": "@item().Delimiter",
+											"type": "Expression"
+										},
+										"Header": {
+											"value": "@item().Header",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@item().ActualFilename",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DataLake",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileSystem": {
+											"value": "@item().FileSystem",
+											"type": "Expression"
+										},
+										"Directory": {
+											"value": "@item().Directory",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@concat(item().ActualFilename,'.parquet')",
+											"type": "Expression"
+										},
+										"BaseUrl": {
+											"value": "@activity('BaseUrl').output.value",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "File status Extracted",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy data2",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[log].[FileStatus]",
+								"storedProcedureParameters": {
+									"LogTime": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "Datetime"
+									},
+									"Status": {
+										"value": "Extracted",
+										"type": "String"
+									},
+									"LogFilesId": {
+										"value": {
+											"value": "@{item().LogFilesId}",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RunId": {
+										"value": {
+											"value": "@{pipeline().RunId}",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('Init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "File status Failed",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy data2",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[log].[FileStatus]",
+								"storedProcedureParameters": {
+									"EndTime": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"LogFilesId": {
+										"value": {
+											"value": "@{item().LogFilesId}",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Status": {
+										"value": "Extraction Failed",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('Init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Set Adf mapping",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "BaseUrl",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[config].[SetAdfMapping_files]",
+								"storedProcedureParameters": {
+									"DefinitionID": {
+										"value": {
+											"value": "@item().FileDefinitionId",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"Type": {
+										"value": "file",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Lookup ADF Mapping for file",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Set Adf mapping",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "select AdfColumnMapping from config.mapping where SourceFileDefinitionId = @{item().FileDefinitionID}  and DAPProcess = 'Data Extraction'",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Metadata",
+									"type": "DatasetReference",
+									"parameters": {
+										"SecretName": {
+											"value": "@variables('init')",
+											"type": "Expression"
+										},
+										"KeyvaultName": {
+											"value": "@pipeline().globalParameters.keyvault_name",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"FlowId": {
+				"type": "string",
+				"defaultValue": "9"
+			},
+			"PipelineName": {
+				"type": "string"
+			},
+			"Init": {
+				"type": "string",
+				"defaultValue": "sql-nndap-metadata"
+			},
+			"SourceInit": {
+				"type": "string",
+				"defaultValue": "sql-nndap-samplesource"
+			}
+		},
+		"variables": {
+			"init": {
+				"type": "String",
+				"defaultValue": "sql-nndap-metadata"
+			},
+			"Columns": {
+				"type": "Array"
+			},
+			"FileName Patern": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Data Extraction Component"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

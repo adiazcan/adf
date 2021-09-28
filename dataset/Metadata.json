@@ -1,0 +1,30 @@
+{
+	"name": "Metadata",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SqlDatabase",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"Secret": {
+					"value": "@dataset().SecretName",
+					"type": "Expression"
+				},
+				"KeyvaultName": {
+					"value": "@dataset().KeyvaultName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"SecretName": {
+				"type": "string"
+			},
+			"KeyvaultName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	}
+}

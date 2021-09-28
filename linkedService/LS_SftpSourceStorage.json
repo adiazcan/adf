@@ -1,0 +1,36 @@
+{
+	"name": "LS_SftpSourceStorage",
+	"properties": {
+		"type": "Sftp",
+		"annotations": [],
+		"typeProperties": {
+			"host": "o5g4p3lrjzlua.westeurope.azurecontainer.io",
+			"port": 22,
+			"skipHostKeyValidation": true,
+			"authenticationType": "Basic",
+			"userName": "nndap",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "LS_KeyVault",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"keyvaultName": {
+							"value": "@linkedService().KeyvaultName",
+							"type": "Expression"
+						}
+					}
+				},
+				"secretName": "@{linkedService().AKVsecretName}"
+			}
+		},
+		"parameters": {
+			"KeyvaultName": {
+				"type": "string"
+			},
+			"AKVsecretName": {
+				"type": "String"
+			}
+		}
+	}
+}

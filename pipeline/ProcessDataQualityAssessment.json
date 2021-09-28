@@ -1,0 +1,418 @@
+{
+	"name": "ProcessDataQualityAssessment",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get DQ Config",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Log StartFlow",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "\n\n\n  SELECT DISTINCT  m.sourcetype,DRT.WatermarkAttribute,\n                '' AS [schema],\n                '' AS [tablename],\n                FD.sourcefilename,\n                FD.sourcedirectory,DAP.*\nFROM   [config].[mapping] AS m\n       INNER JOIN [config].connections AS SC\n               ON m.sourceconnectionid = SC.connectionid\n                  AND SC.isactive = 1\n                  AND m.dapprocess = 'DQValidation'\n                  AND m.sourcetype = 'File'\n                  AND m.isactive = 1\n       INNER JOIN [config].connections AS DC\n               ON m.sourceconnectionid = DC.connectionid\n                  AND DC.isactive = 1\n       INNER JOIN [config].[filedefinition] FD\n               ON m.sourcefiledefinitionid = FD.filedefinitionid\n       INNER JOIN [config].[tabledefinition] DRT\n               ON m.sinktabledefinitionid = DRT.tabledefinitionid\n       INNER JOIN [config].[dqruleconfig] RC\n               ON RC.dqfileid = FD.filedefinitionid\n       INNER JOIN [config].[dqruledefinition] RD\n               ON RD.dqruleid = RC.dqruleid\n                  AND RD.[isactive] = 1\n                  AND RC.[isactive] = 1\n\t\tCROSS JOIN   [config].[DAPServices] DAP \nUNION\nSELECT DISTINCT m.sourcetype,SRT.WatermarkAttribute,\n                SRT.[schema],\n                SRT.[tablename],\n                '' AS SourceFilename,\n                '' AS SourceDirectory,DAP.*\nFROM   [config].[mapping] AS m\n       INNER JOIN [config].connections AS c\n               ON m.sourceconnectionid = c.connectionid\n                  AND c.isactive = 1\n                  AND m.dapprocess = 'DQValidation'\n                  AND m.isactive = 1\n                  AND m.sourcetype = 'Delta'\n       INNER JOIN [config].connections AS DC\n               ON m.sourceconnectionid = DC.connectionid\n                  AND DC.isactive = 1\n       INNER JOIN [config].[tabledefinition] SRT\n               ON m.sourcetabledefinitionid = SRT.tabledefinitionid\n       INNER JOIN [config].[dqruleconfig] RC\n               ON RC.dqtableid = SRT.tabledefinitionid\n       INNER JOIN [config].[dqruledefinition] RD\n\t\t\t   ON RD.dqruleid = RC.dqruleid\n\t\t\t\t  AND RD.[isactive] = 1\n\t\t\t\t  AND RC.[isactive] = 1  \n\t\tCROSS JOIN   [config].[DAPServices] DAP \n",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@variables('Init')",
+								"type": "Expression"
+							},
+							"KeyvaultName": {
+								"value": "@pipeline().globalParameters.keyvault_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachTable",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get DQ Config",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get DQ Config').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "ProcessDataQualityAssessment",
+							"type": "DatabricksNotebook",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": {
+									"value": "@pipeline().parameters.Notebookpath",
+									"type": "Expression"
+								},
+								"baseParameters": {
+									"SchemaName": {
+										"value": "@item().schema",
+										"type": "Expression"
+									},
+									"TableName": {
+										"value": "@item().TableName",
+										"type": "Expression"
+									},
+									"SourceType": {
+										"value": "@item().SourceType",
+										"type": "Expression"
+									},
+									"SourceFilename": {
+										"value": "@item().SourceFilename",
+										"type": "Expression"
+									},
+									"SourceDirectory": {
+										"value": "@item().SourceDirectory",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_DAtabricksInteractiveCluster",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"WorkspaceURL": {
+										"value": "@item().DatabricksWorkspaceUrl",
+										"type": "Expression"
+									},
+									"WorkspaceID": {
+										"value": "@item().DatabricksWorkspaceId",
+										"type": "Expression"
+									},
+									"InstancePoolName": {
+										"value": "@item().DatabricksInstancePoolname",
+										"type": "Expression"
+									},
+									"ClusterVersion": {
+										"value": "@item().DatabricksClusterVersion",
+										"type": "Expression"
+									},
+									"PythonVersion": {
+										"value": "@item().DatabricksPythonVersion",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "If Watermark exists",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "ProcessDataQualityAssessment",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@not(equals(string(item().watermarkattribute),''))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Update Watermark",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[config].[WriteWatermark]",
+											"storedProcedureParameters": {
+												"CurrentWatermarkValue": {
+													"value": {
+														"value": "@activity('ProcessDataQualityAssessment').output.runOutput[2]",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"NewWatermarkValue": {
+													"value": {
+														"value": "@activity('ProcessDataQualityAssessment').output.runOutput[1]",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"MappingID": {
+													"value": {
+														"value": "@activity('ProcessDataQualityAssessment').output.runOutput[0]",
+														"type": "Expression"
+													},
+													"type": "Int64"
+												},
+												"WatermarkProcessedDate": {
+													"value": {
+														"value": "@{utcnow()}\n",
+														"type": "Expression"
+													},
+													"type": "DateTime"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "LS_SqlDatabase",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"Secret": {
+													"value": "@variables('init')",
+													"type": "Expression"
+												},
+												"KeyvaultName": {
+													"value": "@pipeline().globalParameters.keyvault_name",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Initialise",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',pipeline().globalParameters.keyvault_name,'.vault.azure.net/secrets/init/?api-version=7.0' )",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IR-NNDAP",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set Init Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Initialise",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Init",
+					"value": {
+						"value": "@activity('Initialise').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Log StartFlow",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set Init Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[log].[StartFlow]",
+					"storedProcedureParameters": {
+						"FlowId": {
+							"value": {
+								"value": "@pipeline().parameters.Flowid",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ParentRunId": {
+							"value": null,
+							"type": "String"
+						},
+						"RunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartTime": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_SqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"Secret": {
+							"value": "@variables('Init')",
+							"type": "Expression"
+						},
+						"KeyvaultName": {
+							"value": "@pipeline().globalParameters.keyvault_name",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Log EndFlow",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEachTable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[log].[EndFlow]",
+					"storedProcedureParameters": {
+						"EndTime": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"Error": {
+							"value": null,
+							"type": "String"
+						},
+						"RunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Status": {
+							"value": {
+								"value": "Completed",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_SqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"Secret": {
+							"value": "@variables('Init')",
+							"type": "Expression"
+						},
+						"KeyvaultName": {
+							"value": "@pipeline().globalParameters.keyvault_name",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"Notebookpath": {
+				"type": "string",
+				"defaultValue": "/Shared/Data Quality/ProcessDataQualityAssessment"
+			},
+			"Flowid": {
+				"type": "string",
+				"defaultValue": "10"
+			}
+		},
+		"variables": {
+			"Init": {
+				"type": "String",
+				"defaultValue": "sql-nndap-metadata"
+			}
+		},
+		"folder": {
+			"name": "Data Quality Component"
+		},
+		"annotations": []
+	}
+}

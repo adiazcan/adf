@@ -1,0 +1,28 @@
+{
+	"name": "TR_RegisterNewDatalakeFiles",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "Log Datalake Files",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"Folder": "@trigger().outputs.body.folderPath",
+					"Filename": "@trigger().outputs.body.fileName"
+				}
+			}
+		],
+		"type": "BlobEventsTrigger",
+		"typeProperties": {
+			"blobPathBeginsWith": "/datalake/blobs/RawData/",
+			"ignoreEmptyBlobs": true,
+			"scope": "/subscriptions/aad340c5-55fb-4951-a714-15c1b4a6e3b3/resourceGroups/rg-hof--40391/providers/Microsoft.Storage/storageAccounts/strnndap40391",
+			"events": [
+				"Microsoft.Storage.BlobCreated"
+			]
+		}
+	}
+}

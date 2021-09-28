@@ -1,0 +1,44 @@
+{
+	"name": "LS_DatabricksJobCluster",
+	"properties": {
+		"parameters": {
+			"DatabricksWorkspaceUrl": {
+				"type": "String"
+			},
+			"ClusterNodeType": {
+				"type": "String"
+			},
+			"ClusterVersion": {
+				"type": "String"
+			},
+			"PythonVersion": {
+				"type": "String"
+			},
+			"DatabricksWorkspaceId": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "@{linkedService().DatabricksWorkspaceUrl}",
+			"authentication": "MSI",
+			"workspaceResourceId": "@linkedService().DatabricksWorkspaceId",
+			"newClusterNodeType": "@{linkedService().ClusterNodeType}",
+			"newClusterNumOfWorker": "1",
+			"newClusterSparkEnvVars": {
+				"NNDAP_DH_VERSION": "2.4.0",
+				"PYSPARK_PYTHON": "/databricks/python3/bin/python3"
+			},
+			"newClusterVersion": "@{linkedService().ClusterVersion}",
+			"newClusterLogDestination": "dbfs:/cluster-logs/adf-nndap",
+			"newClusterInitScripts": [
+				"dbfs:/FileStore/cust_inits/dh-init.sh"
+			]
+		},
+		"connectVia": {
+			"referenceName": "IR-NNDAP",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

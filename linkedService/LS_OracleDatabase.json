@@ -1,0 +1,30 @@
+{
+	"name": "LS_OracleDatabase",
+	"properties": {
+		"parameters": {
+			"KeyvaultName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Oracle",
+		"typeProperties": {
+			"connectionString": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "LS_KeyVault",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"keyvaultName": {
+							"value": "@linkedService().KeyvaultName",
+							"type": "Expression"
+						}
+					}
+				},
+				"secretName": "Oracle-NNdap-CDB1-ConnectionString",
+				"secretVersion": ""
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
+}

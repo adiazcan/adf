@@ -1,0 +1,12 @@
+{
+	"name": "adf-hof-dev-71208",
+	"properties": {
+		"globalParameters": {
+			"keyvault_name": {
+				"type": "string",
+				"value": "kv-dev-adf-24163"
+			}
+		}
+	},
+	"location": "westeurope"
+}

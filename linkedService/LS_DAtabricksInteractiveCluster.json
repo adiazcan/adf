@@ -1,0 +1,46 @@
+{
+	"name": "LS_DAtabricksInteractiveCluster",
+	"properties": {
+		"parameters": {
+			"WorkspaceURL": {
+				"type": "string",
+				"defaultValue": "https://adb-6087747511982705.5.azuredatabricks.net"
+			},
+			"WorkspaceID": {
+				"type": "string",
+				"defaultValue": "/subscriptions/aad340c5-55fb-4951-a714-15c1b4a6e3b3/resourceGroups/rg-hof-dev-80430/providers/Microsoft.Databricks/workspaces/dbw-hof-adbprem-dev"
+			},
+			"InstancePoolName": {
+				"type": "string",
+				"defaultValue": "0128-072204-fuzzy596-pool-OjPAI8cz"
+			},
+			"ClusterVersion": {
+				"type": "string",
+				"defaultValue": "7.3.x-scala2.12"
+			},
+			"PythonVersion": {
+				"type": "string",
+				"defaultValue": "2"
+			}
+		},
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "@linkedService().WorkspaceURL",
+			"authentication": "MSI",
+			"workspaceResourceId": "@linkedService().WorkspaceID",
+			"instancePoolId": "@linkedService().InstancePoolName",
+			"newClusterNumOfWorker": "1",
+			"newClusterSparkEnvVars": {
+				"PYSPARK_PYTHON": "/databricks/python3/bin/python3"
+			},
+			"newClusterVersion": "@linkedService().ClusterVersion",
+			"newClusterLogDestination": "dbfs:/cluster-logs/adf-nndap-interactive",
+			"newClusterInitScripts": []
+		},
+		"connectVia": {
+			"referenceName": "IR-NNDAP",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

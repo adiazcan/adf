@@ -1,0 +1,408 @@
+{
+	"name": "Data Ingestion",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Process Input",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set Init Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select * from (\n  SELECT [LogFilesId],[AdfPipelineRunId],[Status]\n           ,[Folder]\n           ,[Filename],RANK ( ) OVER ( partition by [Filename] order by LogDateTime desc )  as Seq,[LogDateTime]\n  FROM [log].[File]\n  WHERE Filename like '%.parquet'\n)a \ncross join\n[config].[DAPServices] dap\nwhere a.seq=1 and Status IN ('Extracted','Ingestion Failed')  ORDER BY [LogDateTime]",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@variables('Init')",
+								"type": "Expression"
+							},
+							"KeyvaultName": {
+								"value": "@pipeline().globalParameters.keyvault_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachTable",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Process Input",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Process Input').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Process Delta Lake Tables",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "File status Processing",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": {
+									"value": "@pipeline().parameters.Notebookpath",
+									"type": "Expression"
+								},
+								"baseParameters": {
+									"sourcefolder": {
+										"value": "@{item().Folder}",
+										"type": "Expression"
+									},
+									"sourcefilename": {
+										"value": "@{item().Filename}",
+										"type": "Expression"
+									},
+									"flowid": {
+										"value": "@pipeline().parameters.FlowId",
+										"type": "Expression"
+									},
+									"adfpipelinerunid": {
+										"value": "@{item().AdfPipelineRunId}",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_DatabricksJobCluster",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"DatabricksWorkspaceUrl": {
+										"value": "@item().DatabricksWorkspaceUrl",
+										"type": "Expression"
+									},
+									"ClusterNodeType": {
+										"value": "@item().DatabricksClusterNodeType",
+										"type": "Expression"
+									},
+									"ClusterVersion": {
+										"value": "@item().DatabricksClusterVersion",
+										"type": "Expression"
+									},
+									"PythonVersion": {
+										"value": "@item().DatabricksPythonVersion",
+										"type": "Expression"
+									},
+									"DatabricksWorkspaceId": {
+										"value": "@item().DatabricksWorkspaceId",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "File status Processing",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[log].[FileStatus]",
+								"storedProcedureParameters": {
+									"LogTime": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"LogFilesId": {
+										"value": {
+											"value": "@{item().LogFilesId}",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Status": {
+										"value": "Ingestion Process",
+										"type": "String"
+									},
+									"RunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('Init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "File status Ingested",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Process Delta Lake Tables",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[log].[FileStatus]",
+								"storedProcedureParameters": {
+									"LogTime": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"LogFilesId": {
+										"value": {
+											"value": "@{item().LogFilesId}",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Status": {
+										"value": {
+											"value": "@activity('Process Delta Lake Tables').output.runOutput",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('Init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "File status Failed",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Process Delta Lake Tables",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[log].[FileStatus]",
+								"storedProcedureParameters": {
+									"LogTime": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"LogFilesId": {
+										"value": {
+											"value": "@{item().LogFilesId}",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Status": {
+										"value": "Ingestion Failed",
+										"type": "String"
+									},
+									"RunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('Init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Initialise",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',pipeline().globalParameters.keyvault_name,'.vault.azure.net/secrets/init/?api-version=7.0' )",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IR-NNDAP",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set Init Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Initialise",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Init",
+					"value": {
+						"value": "@activity('Initialise').output.value",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"FlowName": {
+				"type": "string",
+				"defaultValue": "ReleaseDemo"
+			},
+			"StartStep": {
+				"type": "string"
+			},
+			"FlowId": {
+				"type": "string",
+				"defaultValue": "4"
+			},
+			"Notebookpath": {
+				"type": "string",
+				"defaultValue": "/Shared/Data Ingestion/ProcessDeltaLake"
+			}
+		},
+		"variables": {
+			"Init": {
+				"type": "String",
+				"defaultValue": "sql-nndap-metadata"
+			}
+		},
+		"folder": {
+			"name": "Data Ingestion Component"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

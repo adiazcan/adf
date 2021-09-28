@@ -1,0 +1,124 @@
+{
+	"name": "Check Pipeline Status",
+	"properties": {
+		"activities": [
+			{
+				"name": "Until Pipeline Stops",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Get DAP config",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(equals(activity('Check Status').output.status, 'InProgress'))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Check Status",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Wait",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://management.azure.com/subscriptions/',json(activity('Get DAP config').output.firstRow.ParamJson).subscriptionId,'/resourceGroups/',json(activity('Get DAP config').output.firstRow.ParamJson).resourceGroup,'/providers/Microsoft.DataFactory/factories/',json(activity('Get DAP config').output.firstRow.ParamJson).factoryName,'/pipelineruns/',pipeline().parameters.PipelineRunId,'?api-version=2018-06-01')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "IR-NNDAP",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"body": "",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://management.azure.com/"
+								}
+							}
+						},
+						{
+							"name": "Wait",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 10
+							}
+						}
+					],
+					"timeout": "7.00:00:00"
+				}
+			},
+			{
+				"name": "Get DAP config",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT CONCAT('{\"subscriptionId\":\"' + [SubscriptionId] + '\"',',',\n\t\t\t\t'\"resourceGroup\":\"' + [ResourceGroup] + '\"',',',\n\t\t\t\t'\"factoryName\":\"' + [DataFactoryName] + '\"',',',\n\t\t\t\t'\"keyvaultName\":\"' + [KeyVaultName]) + '\"}' AS ParamJson \n  FROM [config].[DAPServices]",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@pipeline().parameters.Init",
+								"type": "Expression"
+							},
+							"KeyvaultName": "@pipeline().globalParameters.keyvault_name"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"PipelineRunId": {
+				"type": "string",
+				"defaultValue": "1"
+			},
+			"Init": {
+				"type": "string",
+				"defaultValue": "sql-nndap-metadata"
+			}
+		},
+		"folder": {
+			"name": "Control"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

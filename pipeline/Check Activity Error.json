@@ -1,0 +1,158 @@
+{
+	"name": "Check Activity Error",
+	"properties": {
+		"description": "This pipelin can only function correctly after being published. It will not work in debug mode. \n\nMake sure the pipeline that needs to be checked for activity errors has actually stopt before checking. ",
+		"activities": [
+			{
+				"name": "Get Activity Errors",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://management.azure.com/subscriptions/',json(string(pipeline().parameters.DAPServiceConfig)).subscriptionId,'/resourceGroups/',json(string(pipeline().parameters.DAPServiceConfig)).resourceGroup,'/providers/Microsoft.DataFactory/factories/',json(string(pipeline().parameters.DAPServiceConfig)).factoryName,'/pipelineruns/',pipeline().parameters.PipelineRunId,'/queryActivityruns?api-version=2018-06-01')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IR-NNDAP",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"body": {
+						"value": "@concat('{lastUpdatedBefore: \"', utcnow() ,'\"}')",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://management.azure.com/"
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Get Activity Errors",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(empty(activity('Get Activity Errors').output.value[0].error.errorCode))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Log Activity Errors",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT '@{pipeline().DataFactory}' AS DataFactoryName,\n'@{pipeline().parameters.PipelineRunId}' AS PipelineRunId,\n'@{activity('Get Activity Errors').output.value[0].activityRunId}' AS ActivityRunId,\n'@{activity('Get Activity Errors').output.value[0].activityName}'AS ActivityName,\n'@{activity('Get Activity Errors').output.value[0].error.errorCode}' AS ErrorCode,\n'@{replace(activity('Get Activity Errors').output.value[0].error.message,'''','''''')}' AS ErrorMessage,'@{activity('Get Activity Errors').output.value[0].error.failureType}' AS FailureType,\n'@{if(empty(activity('Get Activity Errors').output.value[0].error.details),null,activity('Get Activity Errors').output.value[0].error.details[0])}' AS Details,\n'@{utcnow()}' AS LogDatetime",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "AzureSqlSink"
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Metadata",
+									"type": "DatasetReference",
+									"parameters": {
+										"SecretName": {
+											"value": "@variables('Init')",
+											"type": "Expression"
+										},
+										"KeyvaultName": {
+											"value": "@pipeline().globalParameters.keyvault_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SQLSink",
+									"type": "DatasetReference",
+									"parameters": {
+										"SinkTableName": "PipelineActivity",
+										"SinkTableSchema": "log",
+										"KeyvaultName": {
+											"value": "@pipeline().globalParameters.keyvault_name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"PipelineRunId": {
+				"type": "string"
+			},
+			"DAPServiceConfig": {
+				"type": "string",
+				"defaultValue": {
+					"subscriptionId": "aad340c5-55fb-4951-a714-15c1b4a6e3b3",
+					"resourceGroup": "rg-hof-dev-71208",
+					"factoryName": "adf-hof-dev-71208",
+					"keyvaultName": "kv-dev-adf-24163"
+				}
+			}
+		},
+		"variables": {
+			"Init": {
+				"type": "String",
+				"defaultValue": "sql-nndap-metadata"
+			},
+			"TestValue": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Control"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

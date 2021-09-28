@@ -1,0 +1,55 @@
+{
+	"name": "RestSource",
+	"properties": {
+		"description": "REST Source dataset definition",
+		"linkedServiceName": {
+			"referenceName": "LS_RESTSource",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"Username": {
+					"value": "@dataset().username",
+					"type": "Expression"
+				},
+				"Password": {
+					"value": "@dataset().password",
+					"type": "Expression"
+				},
+				"BaseUrl": {
+					"value": "@dataset().baseUrl",
+					"type": "Expression"
+				},
+				"KeyvaultName": {
+					"value": "@dataset().keyvaultName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"relativeUrl": {
+				"type": "string"
+			},
+			"username": {
+				"type": "string"
+			},
+			"password": {
+				"type": "string"
+			},
+			"baseUrl": {
+				"type": "string"
+			},
+			"keyvaultName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": {
+				"value": "@dataset().relativeUrl",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

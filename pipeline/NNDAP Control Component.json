@@ -1,0 +1,545 @@
+{
+	"name": "NNDAP Control Component",
+	"properties": {
+		"description": "Drives the entire data process chain from start to finish. ",
+		"activities": [
+			{
+				"name": "Initialise",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',pipeline().globalParameters.keyvault_name,'.vault.azure.net/secrets/init/62124089b2384e298b90b2b9d9ae6d23?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IR-NNDAP",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set Init variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Initialise",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Init",
+					"value": {
+						"value": "@activity('Initialise').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Get DAP config",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set Init variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT CONCAT('{\"subscriptionId\":\"' + [SubscriptionId] + '\"',',',\n\t\t\t\t'\"resourceGroup\":\"' + [ResourceGroup] + '\"',',',\n\t\t\t\t'\"factoryName\":\"' + [DataFactoryName] + '\"',',',\n\t\t\t\t'\"keyvaultName\":\"' + [KeyVaultName]) + '\"}' AS ParamJson \n  FROM [config].[DAPServices]",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@variables('Init')",
+								"type": "Expression"
+							},
+							"KeyvaultName": {
+								"value": "@pipeline().globalParameters.keyvault_name",
+								"type": "Expression"
+							}
+						}
+					}
+				}
+			},
+			{
+				"name": "Get Components",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Log StartFlow",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Lookup Previous Execution",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT\tcf.PipelineName\n\t\t,cf.FlowId\n\t\t,cf.FlowType\nFROM config.Flow AS cf\nWHERE cf.ParentFlowId IN (SELECT FlowId \n\t\t\t\t\t\t\tFROM config.Flow \n\t\t\t\t\t\t\tWHERE PipelineName = '@{pipeline().parameters.MasterFlow}')\n\t\t\t\t\t\t\tAND cf.OrderId > ISNULL('@{pipeline().parameters.StartStep}',0)\n\t\t\t\t\t\t\tAND cf.OrderId > ISNULL((\tSELECT OrderId\n\t\t\t\t\t\t\t\t\t\t\t\t\t\tFROM (\tSELECT\tcf.OrderId\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t,ROW_NUMBER() OVER(ORDER BY FlowStartTime) AS RowNum\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tFROM log.Flow AS lf\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tINNER JOIN config.Flow AS cf \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tON lf.FlowId = cf.FlowId\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tWHERE ParentRunId = CASE \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tWHEN charindex('firstrow','@{activity('Lookup Previous Execution').output}')> 0 \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tTHEN '@{activity('Lookup Previous Execution').output.firstRow.RunId}' \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tELSE '' \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tEND \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tAND (Status = 'Failed' \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tAND @{pipeline().parameters.BypassFailure}=0 \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tAND Status =\tCASE \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tWHEN charindex('firstrow','@{activity('Lookup Previous Execution').output}')> 0 \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tTHEN '@{activity('Lookup Previous Execution').output.firstRow.Status}' \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tELSE '' \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tEND) \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t) AS sq\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tWHERE sq.RowNum = 1),0)\nORDER BY cf.OrderId",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@variables('Init')",
+								"type": "Expression"
+							},
+							"KeyvaultName": {
+								"value": "@pipeline().globalParameters.keyvault_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "For Each Component",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get DAP config",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Get Components",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Components').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Lookup Previous Pipeline Failures",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT TOP 1 Status \nFROM log.Flow \nWHERE Status = 'Failed' \nAND ParentRunId = '@{pipeline().RunId}'\nAND (Error NOT LIKE '%ForEach%'  \nOR (Error LIKE '%ForEach%' \nAND '@{item().FlowType}' <> 'Parallel'))",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Metadata",
+									"type": "DatasetReference",
+									"parameters": {
+										"SecretName": {
+											"value": "@variables('Init')",
+											"type": "Expression"
+										},
+										"KeyvaultName": {
+											"value": "@pipeline().globalParameters.keyvault_name",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						},
+						{
+							"name": "Previous Pipeline did not fail",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Lookup Previous Pipeline Failures",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@not(contains(activity('Lookup Previous Pipeline Failures').output,'firstrow'))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Wait1",
+										"type": "Wait",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"waitTimeInSeconds": 1
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get Master Flow",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set Init variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT [FlowId] FROM [config].[Flow] WHERE PipelineName = '@{pipeline().parameters.MasterFlow}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@variables('Init')",
+								"type": "Expression"
+							},
+							"KeyvaultName": {
+								"value": "@pipeline().globalParameters.keyvault_name",
+								"type": "Expression"
+							}
+						}
+					}
+				}
+			},
+			{
+				"name": "Log StartFlow",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Get Master Flow",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[log].[StartFlow]",
+					"storedProcedureParameters": {
+						"FlowId": {
+							"value": {
+								"value": "@activity('Get Master Flow').output.firstrow.FlowId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ParentRunId": {
+							"value": null,
+							"type": "String"
+						},
+						"RunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartTime": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_SqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"Secret": {
+							"value": "@variables('Init')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Log End Success",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "For Each Component",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[log].[EndFlow]",
+					"storedProcedureParameters": {
+						"EndTime": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"Error": {
+							"value": "",
+							"type": "String"
+						},
+						"RunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Status": {
+							"value": {
+								"value": "Completed",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_SqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"Secret": {
+							"value": "@variables('Init')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Log End Failure",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "For Each Component",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[log].[EndFlow]",
+					"storedProcedureParameters": {
+						"EndTime": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"Error": {
+							"value": "",
+							"type": "String"
+						},
+						"RunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Status": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_SqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"Secret": {
+							"value": "@variables('Init')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Lookup Previous Execution",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Get Master Flow",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT TOP 1 RunId,Status\nFROM\n(\nSELECT lf.RunId\n\t\t,LTRIM(RTRIM(lf.Status)) AS Status\n\t\t,lf.FlowStartTime\nFROM Log.Flow AS lf\nINNER JOIN config.Flow AS cf \nON lf.FlowId = cf.FlowId\nAND lf.ParentRunId IS NULL \nAND cf.FlowName ='@{pipeline().parameters.MasterFlow}' \nLEFT JOIN Log.Flow AS lfe \nON lfe.ParentRunId = lf.RunId\nAND lfe.RunId IS NOT NULL\nUNION ALL\nSELECT '' AS RunId, 'Completed' AS Status, '19000101' AS FlowStartTime\n) AS sq\nORDER BY sq.FlowStartTime DESC",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@variables('Init')",
+								"type": "Expression"
+							},
+							"KeyvaultName": {
+								"value": "@pipeline().globalParameters.keyvault_name",
+								"type": "Expression"
+							}
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"MasterFlow": {
+				"type": "string",
+				"defaultValue": "HRDAP mvp"
+			},
+			"StartStep": {
+				"type": "string"
+			},
+			"RestartRunId": {
+				"type": "string"
+			},
+			"BypassFailure": {
+				"type": "string",
+				"defaultValue": "1"
+			}
+		},
+		"variables": {
+			"Init": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Control"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

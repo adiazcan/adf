@@ -1,0 +1,27 @@
+{
+	"name": "OracleSource",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_OracleDatabase",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"KeyvaultName": {
+					"value": "@dataset().KeyvaultName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"KeyvaultName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "OracleTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "MDSYS",
+			"table": "SDO_CRS_VERTICAL"
+		}
+	}
+}

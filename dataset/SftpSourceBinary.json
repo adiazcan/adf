@@ -1,0 +1,35 @@
+{
+	"name": "SftpSourceBinary",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SftpSourceStorage",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"KeyvaultName": {
+					"value": "@dataset().KeyvaultName",
+					"type": "Expression"
+				},
+				"AKVsecretName": {
+					"value": "@dataset().AKVsecretName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"KeyvaultName": {
+				"type": "string"
+			},
+			"AKVsecretName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"folderPath": "/upload"
+			}
+		}
+	}
+}

@@ -1,0 +1,40 @@
+{
+	"name": "SQLSink",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SqlDatabase",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"Secret": "sql-nndap-metadata",
+				"KeyvaultName": {
+					"value": "@dataset().KeyvaultName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"SinkTableName": {
+				"type": "string"
+			},
+			"SinkTableSchema": {
+				"type": "string"
+			},
+			"KeyvaultName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().SinkTableSchema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().SinkTableName",
+				"type": "Expression"
+			}
+		}
+	}
+}

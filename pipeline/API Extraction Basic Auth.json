@@ -1,0 +1,463 @@
+{
+	"name": "API Extraction Basic Auth",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get API Source Metadata",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set Init Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT\tds.KeyVaultName\n\t\t,src.UsernameSecretName\tAS SourceUsernameSecret\n\t\t,src.PasswordSecretName AS SourcePasswordSecret\n\t\t,src.BaseUrlSecret\t\tAS SourceBaseUrlSecret\n\t\t,src.RelativeUrlSecret\tAS SourceRelativeUrlSecret\n\t\t,snk.BaseUrlSecret\t\tAS SinkBaseUrlSecret\t\n\t\t,snk.Container\t\t\tAS Container\n\t\t,fdsnk.SinkDirectory\t        AS Directory\n\t\t,fdsnk.SinkFileName\t\tAS [FileName]\n\t\t,m.AdfColumnMapping\t\tAS ColumnMapping\nFROM config.Mapping AS m\nINNER JOIN config.Connections AS src\n\t\tON m.SourceConnectionId = src.ConnectionId\n\t\tAND m.FlowId = @{pipeline().parameters.FlowId}\n\t\tAND src.ConnectionType = 'API'\n\t\tAND m.IsActive = 1\nINNER JOIN config.Connections AS snk\n\t\tON m.SinkConnectionId = snk.ConnectionId\n\t\tAND m.FlowId = @{pipeline().parameters.FlowId}\n\t\tAND m.IsActive = 1\nINNER JOIN [config].[FileDefinition] AS fdsnk\t\t-- File is sink\n\t\tON m.SinkFileDefinitionId = fdsnk.FileDefinitionId\nLEFT JOIN [config].[DAPServices] AS ds\n\t\tON 1=1",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@variables('init')",
+								"type": "Expression"
+							},
+							"KeyvaultName": {
+								"value": "@pipeline().globalParameters.keyvault_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "For Each API Source",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get API Source Metadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get API Source Metadata').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Ingest REST data",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "SourceUsername",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "SourceBaseUrl",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "SourceRelativeUrl",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "SinkBaseUrl",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "RestSource",
+									"httpRequestTimeout": "00:01:40",
+									"requestInterval": "00.00:00:00.010",
+									"requestMethod": "GET"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"parallelCopies": 1,
+								"dataIntegrationUnits": 2,
+								"translator": {
+									"value": "@json(item().ColumnMapping)",
+									"type": "Expression"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "RestSource",
+									"type": "DatasetReference",
+									"parameters": {
+										"relativeUrl": {
+											"value": "@activity('SourceRelativeUrl').output.value",
+											"type": "Expression"
+										},
+										"username": {
+											"value": "@activity('SourceUsername').output.value",
+											"type": "Expression"
+										},
+										"password": {
+											"value": "@{item().SourcePasswordSecret}",
+											"type": "Expression"
+										},
+										"baseUrl": {
+											"value": "@activity('SourceBaseUrl').output.value",
+											"type": "Expression"
+										},
+										"keyvaultName": {
+											"value": "@pipeline().globalParameters.keyvault_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DataLake",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileSystem": {
+											"value": "@item().Container",
+											"type": "Expression"
+										},
+										"Directory": {
+											"value": "@concat(item().Directory, '/', formatDateTime(utcnow(), 'yyyy'), '/',formatDateTime(utcnow(), 'MM'))",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@concat(item().FileName,utcnow(),'.parquet')",
+											"type": "Expression"
+										},
+										"BaseUrl": {
+											"value": "@activity('SinkBaseUrl').output.value",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "SourceUsername",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SourceUsernameSecret,'/?api-version=7.0')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "IR-NNDAP",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						},
+						{
+							"name": "SourceBaseUrl",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SourceBaseUrlSecret,'/?api-version=7.0')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "IR-NNDAP",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						},
+						{
+							"name": "SourceRelativeUrl",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SourceRelativeUrlSecret,'/?api-version=7.0')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "IR-NNDAP",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						},
+						{
+							"name": "SinkBaseUrl",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SinkBaseUrlSecret,'/?api-version=7.0')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "IR-NNDAP",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						},
+						{
+							"name": "Log Parameters",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Ingest REST data",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[log].[Parameters]",
+								"storedProcedureParameters": {
+									"output_JSON": {
+										"value": {
+											"value": "@concat('{','\"KeyVaultName\":\"',item().KeyVaultName,'\",','\"SourceUsernameSecret\":\"',item().SourceUsernameSecret,'\",','\"SourcePasswordSecret\":\"',item().SourcePasswordSecret,'\",','\"SourceBaseUrlSecret\":\"',item().SourceBaseUrlSecret,'\",','\"SourceRelativeUrlSecret\":\"',item().SourceRelativeUrlSecret,'\",','\"SinkBaseUrlSecret\":\"',item().SinkBaseUrlSecret,'\",','\"Container\":\"',item().Container,'\",','\"Directory\":\"',item().Directory,'\",','\"FileName\":\"',item().FileName,'\"}')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Log Pipeline Run",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Ingest REST data",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT '@{pipeline().DataFactory}' as DataFactoryName,\n'@{pipeline().Pipeline}' as PipelineName,\n'@{pipeline().RunId}' as RunId,\n--'@{activity('Ingest REST data').output.executionDetails[0].profile.transfer.details.readingFromSource.type}' as Source,\n'@{item().SourceBaseUrlSecret}' as Source,\n'@{activity('Ingest REST data').output.executionDetails[0].source.type}' as SourceType,\n--'@{activity('Ingest REST data').output.executionDetails[0].profile.transfer.details.writingToSink.type}' as Sink,\n'@{concat(item().Directory,'.',item().FileName)}' as Sink,\n'@{activity('Ingest REST data').output.executionDetails[0].sink.type}' as SinkType,\n'@{pipeline().TriggerType}' as TriggerType,\n'@{pipeline().TriggerId}' as TriggerId,\n'@{pipeline().TriggerName}' as TriggerName,\n'@{pipeline().TriggerTime}' as TriggerTime,\n'@{activity('Ingest REST data').output.rowsRead}' as RowsRead,\n'@{activity('Ingest REST data').output.rowsCopied}' as RowsCopied,\n'@{activity('Ingest REST data').output.copyDuration}' as CopyDurationinsecs,\n'@{activity('Ingest REST data').output.executionDetails[0].status}' as ExecutionStatus,\n'@{activity('Ingest REST data').output.usedParallelCopies}' as NoParallelCopies,\n'@{activity('Ingest REST data').output.effectiveIntegrationRuntime}' as EffectiveIntegrationRuntime,\n'@{activity('Ingest REST data').output.executionDetails[0].start}' as CopyActivityStartTime,\n'@{utcnow()}' as CopyActivityEndTime,\n'@{activity('Ingest REST data').output.executionDetails[0].detailedDurations.queuingDuration}' as CopyActivityqueuingDurationinsecs,\n'@{activity('Ingest REST data').output.executionDetails[0].detailedDurations.timeToFirstByte}' as CopyActivitytimeToFirstByteinsecs,\n'@{activity('Ingest REST data').output.executionDetails[0].detailedDurations.transferDuration}' as CopyActivitytransferDurationinsecs\n-- '@{activity('Ingest REST data').output.billingreference}' as billingreference",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "AzureSqlSink"
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Metadata",
+									"type": "DatasetReference",
+									"parameters": {
+										"SecretName": {
+											"value": "@variables('init')",
+											"type": "Expression"
+										},
+										"KeyvaultName": {
+											"value": "@pipeline().globalParameters.keyvault_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SQLSink",
+									"type": "DatasetReference",
+									"parameters": {
+										"SinkTableName": "PipelinesLogs",
+										"SinkTableSchema": "log",
+										"KeyvaultName": {
+											"value": "@pipeline().globalParameters.keyvault_name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Set Init Variable",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "init",
+					"value": {
+						"value": "@pipeline().parameters.Init",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"FlowId": {
+				"type": "string",
+				"defaultValue": "3"
+			},
+			"PipelineName": {
+				"type": "string",
+				"defaultValue": "test"
+			},
+			"Init": {
+				"type": "string",
+				"defaultValue": "sql-nndap-metadata"
+			}
+		},
+		"variables": {
+			"init": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Data Extraction Component"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

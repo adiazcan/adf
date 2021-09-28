@@ -1,0 +1,508 @@
+{
+	"name": "Data Extraction",
+	"properties": {
+		"description": "The driving pipeline of the data extraction component",
+		"activities": [
+			{
+				"name": "Log StartFlow",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set Init Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[log].[StartFlow]",
+					"storedProcedureParameters": {
+						"FlowId": {
+							"value": {
+								"value": "@pipeline().parameters.FlowId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ParentRunId": {
+							"value": null,
+							"type": "String"
+						},
+						"RunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"StartTime": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_SqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"Secret": {
+							"value": "@variables('Init')",
+							"type": "Expression"
+						},
+						"KeyvaultName": {
+							"value": "@pipeline().globalParameters.keyvault_name",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Initialise",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',pipeline().globalParameters.keyvault_name,'.vault.azure.net/secrets/init/?api-version=7.0' )",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IR-NNDAP",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set Init Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Initialise",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Init",
+					"value": {
+						"value": "@activity('Initialise').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Log EndFlow",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "For Each Extraction",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[log].[EndFlow]",
+					"storedProcedureParameters": {
+						"EndTime": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"Error": {
+							"value": null,
+							"type": "String"
+						},
+						"RunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Status": {
+							"value": {
+								"value": "Completed",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_SqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"Secret": {
+							"value": "@variables('Init')",
+							"type": "Expression"
+						},
+						"KeyvaultName": {
+							"value": "@pipeline().globalParameters.keyvault_name",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Get Data Extraction Flows",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Log StartFlow",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT\tdef.PipelineName\n\t\t,def.FlowId\n\t\t,dap.SubscriptionId\n\t\t,dap.ResourceGroup\n\t\t,dap.DataFactoryName\n\t\t,dap.KeyVaultName\nFROM config.Flow AS mf\nINNER JOIN config.Flow AS cf\n\t\tON mf.FlowId = cf.ParentFlowId\n\t\tAND cf.ParentFlowId IN (SELECT FlowId\n\t\t\t\t\t\t\t\tFROM config.Flow \n\t\t\t\t\t\t\t\tWHERE PipelineName = '@{pipeline().parameters.FlowName}')\nINNER JOIN config.Flow AS def\n\t\tON cf.FlowId = def.ParentFlowId\nINNER JOIN config.Mapping AS cm\n\t\tON cm.FlowId = def.FlowId\n\t\tAND cm.IsActive = 1\nCROSS JOIN\n[config].[DAPServices] dap\nGROUP BY def.PipelineName\n\t\t\t,def.FlowId\n\t\t\t,dap.SubscriptionId\n\t\t\t,dap.ResourceGroup\n\t\t\t,dap.DataFactoryName\n\t\t\t,dap.KeyVaultName",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@variables('Init')",
+								"type": "Expression"
+							},
+							"KeyvaultName": {
+								"value": "@pipeline().globalParameters.keyvault_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "For Each Extraction",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Data Extraction Flows",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Data Extraction Flows').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Execute Data Extraction Pipeline",
+							"description": "The config.Flow metadata table contains the configuration of the data extraction types to be executed.",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://management.azure.com/subscriptions/',item().SubscriptionId,'/resourceGroups/',item().resourceGroup,'/providers/Microsoft.DataFactory/factories/',item().DataFactoryName,'/pipelines/',replace(item().PipelineName,' ','%20'),'/createRun?api-version=2018-06-01')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "IR-NNDAP",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "POST",
+								"body": {
+									"value": "@json(concat('{','\"Init\":\"',variables('Init'),'\",','\"PipelineName\":\"',item().PipelineName,'\",','\"FlowId\":\"',item().FlowId,'\"}'))",
+									"type": "Expression"
+								},
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://management.azure.com/"
+								}
+							}
+						},
+						{
+							"name": "Log Pipeline Start",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Execute Data Extraction Pipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[log].[StartFlow]",
+								"storedProcedureParameters": {
+									"FlowId": {
+										"value": {
+											"value": "@item().FlowId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ParentRunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RunId": {
+										"value": {
+											"value": "@activity('Execute Data Extraction Pipeline').output.runId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"StartTime": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('Init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Get Pipeline Run",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Check Pipeline Status",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://management.azure.com/subscriptions/',item().SubscriptionId,'/resourceGroups/',item().resourceGroup,'/providers/Microsoft.DataFactory/factories/',item().DataFactoryName,'/pipelineruns/',activity('Execute Data Extraction Pipeline').output.runId,'?api-version=2018-06-01')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "IR-NNDAP",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://management.azure.com/"
+								}
+							}
+						},
+						{
+							"name": "Check Pipeline Status",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Log Pipeline Start",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Check Pipeline Status",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"PipelineRunId": {
+										"value": "@{activity('Execute Data Extraction Pipeline').output.runId}",
+										"type": "Expression"
+									},
+									"Init": {
+										"value": "@variables('Init')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Log Pipeline End",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Get Pipeline Run",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[log].[EndFlow]",
+								"storedProcedureParameters": {
+									"EndTime": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"Error": {
+										"value": {
+											"value": "@activity('Get Pipeline Run').output.message",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"RunId": {
+										"value": {
+											"value": "@activity('Execute Data Extraction Pipeline').output.runId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Status": {
+										"value": {
+											"value": "@activity('Get Pipeline Run').output.status",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('Init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"FlowName": {
+				"type": "string",
+				"defaultValue": "ReleaseDemo"
+			},
+			"StartStep": {
+				"type": "string"
+			},
+			"FlowId": {
+				"type": "string",
+				"defaultValue": "2"
+			}
+		},
+		"variables": {
+			"Init": {
+				"type": "String",
+				"defaultValue": "sql-nndap-metadata"
+			}
+		},
+		"folder": {
+			"name": "Data Extraction Component"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

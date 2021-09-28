@@ -1,0 +1,49 @@
+{
+	"name": "LS_RESTSource",
+	"properties": {
+		"parameters": {
+			"Username": {
+				"type": "String"
+			},
+			"Password": {
+				"type": "String"
+			},
+			"BaseUrl": {
+				"type": "String"
+			},
+			"KeyvaultName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "RestService",
+		"typeProperties": {
+			"url": "@{linkedService().BaseUrl}",
+			"enableServerCertificateValidation": true,
+			"authenticationType": "Basic",
+			"userName": "@{linkedService().Username}",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "LS_KeyVault",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"keyvaultName": {
+							"value": "@linkedService().KeyvaultName",
+							"type": "Expression"
+						}
+					}
+				},
+				"secretName": {
+					"value": "@{linkedService().Password}",
+					"type": "Expression"
+				}
+			}
+		},
+		"connectVia": {
+			"referenceName": "IR-NNDAP",
+			"type": "IntegrationRuntimeReference"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
+}

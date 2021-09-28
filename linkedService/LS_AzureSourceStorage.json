@@ -1,0 +1,38 @@
+{
+	"name": "LS_AzureSourceStorage",
+	"properties": {
+		"parameters": {
+			"BaseUrl": {
+				"type": "String"
+			},
+			"AKVsecretName": {
+				"type": "String"
+			},
+			"KevaultName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "@{linkedService().BaseUrl}",
+			"accountKey": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "LS_KeyVault",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"keyvaultName": {
+							"value": "@linkedService().KevaultName",
+							"type": "Expression"
+						}
+					}
+				},
+				"secretName": {
+					"value": "@{linkedService().AKVsecretName}",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

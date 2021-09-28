@@ -1,0 +1,55 @@
+{
+	"name": "StorageSourceBinary",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AzureSourceStorage",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"BaseUrl": {
+					"value": "@dataset().BaseUrl",
+					"type": "Expression"
+				},
+				"AKVsecretName": {
+					"value": "@dataset().KeySecretName",
+					"type": "Expression"
+				},
+				"KevaultName": {
+					"value": "@dataset().KvName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"FileSystem": {
+				"type": "string"
+			},
+			"Directory": {
+				"type": "string"
+			},
+			"BaseUrl": {
+				"type": "string"
+			},
+			"KeySecretName": {
+				"type": "string"
+			},
+			"KvName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@dataset().Directory",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().FileSystem",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

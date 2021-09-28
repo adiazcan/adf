@@ -1,0 +1,72 @@
+{
+	"name": "StorageSourceCSV",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AzureSourceStorage",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"BaseUrl": {
+					"value": "@dataset().BaseUrl",
+					"type": "Expression"
+				},
+				"AKVsecretName": {
+					"value": "@dataset().KeySecretName",
+					"type": "Expression"
+				},
+				"KevaultName": {
+					"value": "@dataset().KeyvaultName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"FileSystem": {
+				"type": "string"
+			},
+			"Directory": {
+				"type": "string"
+			},
+			"delimiter": {
+				"type": "string"
+			},
+			"header": {
+				"type": "bool"
+			},
+			"BaseUrl": {
+				"type": "string"
+			},
+			"KeySecretName": {
+				"type": "string"
+			},
+			"KeyvaultName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@dataset().Directory",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().FileSystem",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": {
+				"value": "@dataset().delimiter",
+				"type": "Expression"
+			},
+			"escapeChar": "\\",
+			"firstRowAsHeader": {
+				"value": "@dataset().header",
+				"type": "Expression"
+			},
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}
