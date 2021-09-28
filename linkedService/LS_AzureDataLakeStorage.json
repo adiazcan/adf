@@ -1,19 +1,19 @@
 {
-    "name": "LS_AzureDataLakeStorage",
-    "properties": {
-        "type": "AzureBlobFS",
-        "annotations": [],
-        "typeProperties": {
-            "url": "@{linkedService().BaseUrl}"
-        },
-        "parameters": {
-            "BaseUrl": {
-                "type": "String"
-            }
-        },
-        "connectVia": {
-            "referenceName": "IR-NNDAP",
-            "type": "IntegrationRuntimeReference"
-        }
-    }
+	"name": "LS_AzureDataLakeStorage",
+	"properties": {
+		"parameters": {
+			"BaseUrl": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "@{linkedService().BaseUrl}"
+		},
+		"connectVia": {
+			"referenceName": "IR-NNDAP",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
 }
