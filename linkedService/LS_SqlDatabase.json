@@ -29,10 +29,6 @@
 					"type": "Expression"
 				}
 			}
-		},
-		"connectVia": {
-			"referenceName": "IR-NNDAP",
-			"type": "IntegrationRuntimeReference"
 		}
 	},
 	"type": "Microsoft.DataFactory/factories/linkedservices"

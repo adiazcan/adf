@@ -1,873 +1,869 @@
 {
-    "name": "DQT Conformed Generic",
-    "properties": {
-        "activities": [
-            {
-                "name": "For Each Table",
-                "type": "ForEach",
-                "dependsOn": [
-                    {
-                        "activity": "Get Parameters",
-                        "dependencyConditions": [
-                            "Succeeded"
-                        ]
-                    }
-                ],
-                "userProperties": [],
-                "typeProperties": {
-                    "items": {
-                        "value": "@activity('Get Parameters').output.value",
-                        "type": "Expression"
-                    },
-                    "isSequential": true,
-                    "activities": [
-                        {
-                            "name": "Notebook_ingestion_to_conform",
-                            "type": "DatabricksNotebook",
-                            "dependsOn": [
-                                {
-                                    "activity": "GetDeltaStructure",
-                                    "dependencyConditions": [
-                                        "Succeeded"
-                                    ]
-                                },
-                                {
-                                    "activity": "Lookup Table Name",
-                                    "dependencyConditions": [
-                                        "Succeeded"
-                                    ]
-                                }
-                            ],
-                            "policy": {
-                                "timeout": "7.00:00:00",
-                                "retry": 0,
-                                "retryIntervalInSeconds": 30,
-                                "secureOutput": false,
-                                "secureInput": false
-                            },
-                            "userProperties": [
-                                {
-                                    "name": "TableName",
-                                    "value": "@{json(item().ParamJson)}"
-                                },
-                                {
-                                    "name": "NotebookName",
-                                    "value": "@{json(item().ParamJson)}"
-                                }
-                            ],
-                            "typeProperties": {
-                                "notebookPath": {
-                                    "value": "@concat('/Shared/Data Harmonization/',json(item().ParamJson).NotebookName)",
-                                    "type": "Expression"
-                                },
-                                "baseParameters": {
-                                    "hostname": {
-                                        "value": "@json(item().ParamJson).jdbcHostname",
-                                        "type": "Expression"
-                                    },
-                                    "database": {
-                                        "value": "@json(item().ParamJson).jdbcDatabase",
-                                        "type": "Expression"
-                                    },
-                                    "port": {
-                                        "value": "@json(item().ParamJson).jdbcPort",
-                                        "type": "Expression"
-                                    },
-                                    "databaseUser": {
-                                        "value": "@json(item().ParamJson).database_user",
-                                        "type": "Expression"
-                                    },
-                                    "databasePassword": {
-                                        "value": "@json(item().ParamJson).database_password",
-                                        "type": "Expression"
-                                    },
-                                    "targetTable": {
-                                        "value": "@json(item().ParamJson).TargetTable",
-                                        "type": "Expression"
-                                    },
-                                    "runId": {
-                                        "value": "@pipeline().RunId",
-                                        "type": "Expression"
-                                    },
-                                    "databaseSecretScope": {
-                                        "value": "@json(item().ParamJson).database_secret_scope",
-                                        "type": "Expression"
-                                    },
-                                    "sourceSchema": {
-                                        "value": "@pipeline().parameters.SourceSchema",
-                                        "type": "Expression"
-                                    },
-                                    "targetSchema": {
-                                        "value": "@pipeline().parameters.TargetSchema",
-                                        "type": "Expression"
-                                    },
-                                    "loadType": {
-                                        "value": "@json(item().ParamJson).LoadType",
-                                        "type": "Expression"
-                                    },
-                                    "startTime": {
-                                        "value": "@activity('Lookup Table Name').output.firstRow.ActivityStartTime",
-                                        "type": "Expression"
-                                    },
-                                    "sourceName": {
-                                        "value": "@pipeline().parameters.SourceSystem",
-                                        "type": "Expression"
-                                    },
-                                    "bulkCopyBatchSize": {
-                                        "value": "@pipeline().parameters.bulkCopyBatchSize",
-                                        "type": "Expression"
-                                    },
-                                    "bulkCopyTableLock": {
-                                        "value": "@pipeline().parameters.bulkCopyTableLock",
-                                        "type": "Expression"
-                                    },
-                                    "bulkCopyTimeout": {
-                                        "value": "@pipeline().parameters.bulkCopyTimeout",
-                                        "type": "Expression"
-                                    },
-                                    "defaultDeltaMountLocation": {
-                                        "value": "@json(item().ParamJson).defaultDeltaMountLocation",
-                                        "type": "Expression"
-                                    },
-                                    "defaultMdFileLocation": {
-                                        "value": "@json(item().ParamJson).defaultMdFileLocation",
-                                        "type": "Expression"
-                                    },
-                                    "queryOnly": {
-                                        "value": "@pipeline().parameters.queryOnly",
-                                        "type": "Expression"
-                                    },
-                                    "partitionColumn": {
-                                        "value": "@json(item().ParamJson).partitionColumn",
-                                        "type": "Expression"
-                                    },
-                                    "loadAuditDB": {
-                                        "value": "@pipeline().parameters.AuditLogTable",
-                                        "type": "Expression"
-                                    },
-                                    "validityColumn": {
-                                        "value": "@json(item().ParamJson).validitycolumn",
-                                        "type": "Expression"
-                                    },
-                                    "MdFileType": {
-                                        "value": "@json(item().ParamJson).mdFileType",
-                                        "type": "Expression"
-                                    },
-                                    "PrimaryKey": {
-                                        "value": "@json(item().ParamJson).primarykey",
-                                        "type": "Expression"
-                                    },
-                                    "tenantId": {
-                                        "value": "@json(item().ParamJson).tenantid",
-                                        "type": "Expression"
-                                    },
-                                    "DataHubDatabase": {
-                                        "value": "@pipeline().parameters.DatahubDatabase",
-                                        "type": "Expression"
-                                    },
-                                    "WriteOption": {
-                                        "value": "@json(item().ParamJson).WriteOption",
-                                        "type": "Expression"
-                                    },
-                                    "deltaStructure": {
-                                        "value": "@activity('GetDeltaStructure').output.firstRow.DeltaStructure",
-                                        "type": "Expression"
-                                    }
-                                }
-                            },
-                            "linkedServiceName": {
-                                "referenceName": "LS_DatabricksJobCluster",
-                                "type": "LinkedServiceReference",
-                                "parameters": {
-                                    "DatabricksWorkspaceUrl": {
-                                        "value": "@json(item().ParamJson).DatabricksWorkspaceUrl",
-                                        "type": "Expression"
-                                    },
-                                    "ClusterNodeType": {
-                                        "value": "@json(item().ParamJson).ClusterNodeType",
-                                        "type": "Expression"
-                                    },
-                                    "ClusterVersion": {
-                                        "value": "@json(item().ParamJson).ClusterVersion",
-                                        "type": "Expression"
-                                    },
-                                    "PythonVersion": {
-                                        "value": "@json(item().ParamJson).PythonVersion",
-                                        "type": "Expression"
-                                    },
-                                    "DatabricksWorkspaceId": {
-                                        "value": "@json(item().ParamJson).DatabricksworkspaceId",
-                                        "type": "Expression"
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            "name": "Lookup Table Name",
-                            "type": "Lookup",
-                            "dependsOn": [
-                                {
-                                    "activity": "ShouldDropIndex",
-                                    "dependencyConditions": [
-                                        "Succeeded"
-                                    ]
-                                }
-                            ],
-                            "policy": {
-                                "timeout": "7.00:00:00",
-                                "retry": 0,
-                                "retryIntervalInSeconds": 30,
-                                "secureOutput": false,
-                                "secureInput": false
-                            },
-                            "userProperties": [],
-                            "typeProperties": {
-                                "source": {
-                                    "type": "AzureSqlSource",
-                                    "sqlReaderStoredProcedureName": "[CONFIG].[NotebookTable]",
-                                    "storedProcedureParameters": {
-                                        "ActivityStartTime": {
-                                            "type": "String",
-                                            "value": {
-                                                "value": "@{concat('utc',utcnow('O'))}",
-                                                "type": "Expression"
-                                            }
-                                        },
-                                        "ProcessingLayer": {
-                                            "type": "String",
-                                            "value": {
-                                                "value": "@{pipeline().parameters.ProcessingLayer}",
-                                                "type": "Expression"
-                                            }
-                                        },
-                                        "SourceSystemName": {
-                                            "type": "String",
-                                            "value": {
-                                                "value": "@{pipeline().parameters.SourceSystem}",
-                                                "type": "Expression"
-                                            }
-                                        },
-                                        "TargetTable": {
-                                            "type": "String",
-                                            "value": {
-                                                "value": "@json(item().ParamJson).TargetTable",
-                                                "type": "Expression"
-                                            }
-                                        },
-                                        "LoadType": {
-                                            "type": "String",
-                                            "value": {
-                                                "value": "@pipeline().parameters.LoadType",
-                                                "type": "Expression"
-                                            }
-                                        }
-                                    },
-                                    "partitionOption": "None"
-                                },
-                                "dataset": {
-                                    "referenceName": "Metadata",
-                                    "type": "DatasetReference",
-                                    "parameters": {
-                                        "SecretName": {
-                                            "value": "@variables('Init')",
-                                            "type": "Expression"
-                                        },
-                                        "KeyvaultName": {
-                                            "value": "@pipeline().globalParameters.keyvault_name",
-                                            "type": "Expression"
-                                        }
-                                    }
-                                },
-                                "firstRowOnly": true
-                            }
-                        },
-                        {
-                            "name": "ShouldDropIndex",
-                            "type": "IfCondition",
-                            "dependsOn": [
-                                {
-                                    "activity": "LogStartFlow",
-                                    "dependencyConditions": [
-                                        "Succeeded"
-                                    ]
-                                }
-                            ],
-                            "userProperties": [],
-                            "typeProperties": {
-                                "expression": {
-                                    "value": "@equals(pipeline().parameters.shouldChangeIndex,1)",
-                                    "type": "Expression"
-                                },
-                                "ifTrueActivities": [
-                                    {
-                                        "name": "Drop Index",
-                                        "type": "Lookup",
-                                        "dependsOn": [],
-                                        "policy": {
-                                            "timeout": "7.00:00:00",
-                                            "retry": 0,
-                                            "retryIntervalInSeconds": 30,
-                                            "secureOutput": false,
-                                            "secureInput": false
-                                        },
-                                        "userProperties": [],
-                                        "typeProperties": {
-                                            "source": {
-                                                "type": "AzureSqlSource",
-                                                "sqlReaderStoredProcedureName": "[CONFIG].[ChangeIndexes]",
-                                                "storedProcedureParameters": {
-                                                    "ForceIndexDrop": {
-                                                        "type": "Int32",
-                                                        "value": {
-                                                            "value": "@pipeline().parameters.ForceIndexDrop",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "Pipeline_Name": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@pipeline().Pipeline",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "SourceSystemName": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@pipeline().parameters.SourceSystem",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "TargetTable": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@json(item().ParamJson).TargetTable",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "LoadType": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@pipeline().parameters.LoadType",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "ProcessingLayer": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@pipeline().parameters.ProcessingLayer",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "OperationType": {
-                                                        "type": "Int32",
-                                                        "value": {
-                                                            "value": "1",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "StartTimeSCD": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@concat('utc',utcnow('O'))",
-                                                            "type": "Expression"
-                                                        }
-                                                    }
-                                                },
-                                                "queryTimeout": "02:00:00",
-                                                "partitionOption": "None"
-                                            },
-                                            "dataset": {
-                                                "referenceName": "Metadata",
-                                                "type": "DatasetReference",
-                                                "parameters": {
-                                                    "SecretName": {
-                                                        "value": "@variables('Init')",
-                                                        "type": "Expression"
-                                                    },
-                                                    "KeyvaultName": {
-                                                        "value": "@pipeline().globalParameters.keyvault_name",
-                                                        "type": "Expression"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                ]
-                            }
-                        },
-                        {
-                            "name": "ShouldCreateIndex",
-                            "type": "IfCondition",
-                            "dependsOn": [
-                                {
-                                    "activity": "Notebook_ingestion_to_conform",
-                                    "dependencyConditions": [
-                                        "Succeeded"
-                                    ]
-                                }
-                            ],
-                            "userProperties": [],
-                            "typeProperties": {
-                                "expression": {
-                                    "value": "@equals(pipeline().parameters.shouldChangeIndex,1)",
-                                    "type": "Expression"
-                                },
-                                "ifTrueActivities": [
-                                    {
-                                        "name": "Create Index",
-                                        "type": "Lookup",
-                                        "dependsOn": [],
-                                        "policy": {
-                                            "timeout": "7.00:00:00",
-                                            "retry": 0,
-                                            "retryIntervalInSeconds": 30,
-                                            "secureOutput": false,
-                                            "secureInput": false
-                                        },
-                                        "userProperties": [],
-                                        "typeProperties": {
-                                            "source": {
-                                                "type": "AzureSqlSource",
-                                                "sqlReaderStoredProcedureName": "[CONFIG].[ChangeIndexes]",
-                                                "storedProcedureParameters": {
-                                                    "ForceIndexDrop": {
-                                                        "type": "Int32",
-                                                        "value": {
-                                                            "value": "@pipeline().parameters.ForceIndexDrop",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "Pipeline_Name": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@pipeline().Pipeline",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "SourceSystemName": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@pipeline().parameters.SourceSystem",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "TargetTable": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@json(item().ParamJson).TargetTable",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "LoadType": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@pipeline().parameters.LoadType",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "ProcessingLayer": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@pipeline().parameters.ProcessingLayer",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "OperationType": {
-                                                        "type": "Int32",
-                                                        "value": {
-                                                            "value": "2",
-                                                            "type": "Expression"
-                                                        }
-                                                    },
-                                                    "StartTimeSCD": {
-                                                        "type": "String",
-                                                        "value": {
-                                                            "value": "@activity('Lookup Table Name').output.firstRow.ActivityStartTime",
-                                                            "type": "Expression"
-                                                        }
-                                                    }
-                                                },
-                                                "queryTimeout": "02:00:00",
-                                                "partitionOption": "None"
-                                            },
-                                            "dataset": {
-                                                "referenceName": "Metadata",
-                                                "type": "DatasetReference",
-                                                "parameters": {
-                                                    "SecretName": {
-                                                        "value": "@variables('Init')",
-                                                        "type": "Expression"
-                                                    },
-                                                    "KeyvaultName": {
-                                                        "value": "@pipeline().globalParameters.keyvault_name",
-                                                        "type": "Expression"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                ]
-                            }
-                        },
-                        {
-                            "name": "LogStartFlow",
-                            "type": "SqlServerStoredProcedure",
-                            "dependsOn": [],
-                            "policy": {
-                                "timeout": "7.00:00:00",
-                                "retry": 0,
-                                "retryIntervalInSeconds": 30,
-                                "secureOutput": false,
-                                "secureInput": false
-                            },
-                            "userProperties": [],
-                            "typeProperties": {
-                                "storedProcedureName": "[log].[AuditStart]",
-                                "storedProcedureParameters": {
-                                    "AdfPipelineRunId": {
-                                        "value": {
-                                            "value": "@pipeline().RunId",
-                                            "type": "Expression"
-                                        },
-                                        "type": "String"
-                                    },
-                                    "TargetTable": {
-                                        "value": {
-                                            "value": "@json(item().ParamJson).TargetTable",
-                                            "type": "Expression"
-                                        },
-                                        "type": "String"
-                                    }
-                                }
-                            },
-                            "linkedServiceName": {
-                                "referenceName": "LS_SqlDatabase",
-                                "type": "LinkedServiceReference",
-                                "parameters": {
-                                    "Secret": {
-                                        "value": "@variables('Init')",
-                                        "type": "Expression"
-                                    },
-                                    "KeyvaultName": {
-                                        "value": "@pipeline().globalParameters.keyvault_name",
-                                        "type": "Expression"
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            "name": "LogPipelineEnd",
-                            "type": "SqlServerStoredProcedure",
-                            "dependsOn": [
-                                {
-                                    "activity": "ShouldCreateIndex",
-                                    "dependencyConditions": [
-                                        "Succeeded"
-                                    ]
-                                }
-                            ],
-                            "policy": {
-                                "timeout": "7.00:00:00",
-                                "retry": 0,
-                                "retryIntervalInSeconds": 30,
-                                "secureOutput": false,
-                                "secureInput": false
-                            },
-                            "userProperties": [],
-                            "typeProperties": {
-                                "storedProcedureName": "[log].[AuditEnd]",
-                                "storedProcedureParameters": {
-                                    "AdfPipelineRunId": {
-                                        "value": {
-                                            "value": "@pipeline().RunId",
-                                            "type": "Expression"
-                                        },
-                                        "type": "String"
-                                    },
-                                    "TargetTable": {
-                                        "value": {
-                                            "value": "@json(item().ParamJson).TargetTable",
-                                            "type": "Expression"
-                                        },
-                                        "type": "String"
-                                    },
-                                    "Status": {
-                                        "value": {
-                                            "value": "Completed",
-                                            "type": "Expression"
-                                        },
-                                        "type": "String"
-                                    }
-                                }
-                            },
-                            "linkedServiceName": {
-                                "referenceName": "LS_SqlDatabase",
-                                "type": "LinkedServiceReference",
-                                "parameters": {
-                                    "Secret": {
-                                        "value": "@variables('Init')",
-                                        "type": "Expression"
-                                    },
-                                    "KeyvaultName": {
-                                        "value": "@pipeline().globalParameters.keyvault_name",
-                                        "type": "Expression"
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            "name": "Update DeltaStructure",
-                            "type": "SqlServerStoredProcedure",
-                            "dependsOn": [
-                                {
-                                    "activity": "ShouldDropIndex",
-                                    "dependencyConditions": [
-                                        "Succeeded"
-                                    ]
-                                }
-                            ],
-                            "policy": {
-                                "timeout": "7.00:00:00",
-                                "retry": 0,
-                                "retryIntervalInSeconds": 30,
-                                "secureOutput": false,
-                                "secureInput": false
-                            },
-                            "userProperties": [],
-                            "typeProperties": {
-                                "storedProcedureName": "[config].[UpdateDerivedColumnsMetadata]",
-                                "storedProcedureParameters": {
-                                    "TableDefinitionID": {
-                                        "value": {
-                                            "value": "@json(item().ParamJson).TableId",
-                                            "type": "Expression"
-                                        }
-                                    }
-                                }
-                            },
-                            "linkedServiceName": {
-                                "referenceName": "LS_SqlDatabase",
-                                "type": "LinkedServiceReference",
-                                "parameters": {
-                                    "Secret": {
-                                        "value": "@variables('Init')",
-                                        "type": "Expression"
-                                    },
-                                    "KeyvaultName": {
-                                        "value": "@pipeline().globalParameters.keyvault_name",
-                                        "type": "Expression"
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            "name": "GetDeltaStructure",
-                            "type": "Lookup",
-                            "dependsOn": [
-                                {
-                                    "activity": "Update DeltaStructure",
-                                    "dependencyConditions": [
-                                        "Succeeded"
-                                    ]
-                                }
-                            ],
-                            "policy": {
-                                "timeout": "7.00:00:00",
-                                "retry": 0,
-                                "retryIntervalInSeconds": 30,
-                                "secureOutput": false,
-                                "secureInput": false
-                            },
-                            "userProperties": [],
-                            "typeProperties": {
-                                "source": {
-                                    "type": "AzureSqlSource",
-                                    "sqlReaderQuery": {
-                                        "value": "select DeltaStructure as DeltaStructure from config.TableDefinition\n where TableDefinitionId = @{json(item().ParamJson).TableId}",
-                                        "type": "Expression"
-                                    },
-                                    "queryTimeout": "02:00:00",
-                                    "partitionOption": "None"
-                                },
-                                "dataset": {
-                                    "referenceName": "Metadata",
-                                    "type": "DatasetReference",
-                                    "parameters": {
-                                        "SecretName": {
-                                            "value": "@variables('Init')",
-                                            "type": "Expression"
-                                        },
-                                        "KeyvaultName": {
-                                            "value": "@pipeline().globalParameters.keyvault_name",
-                                            "type": "Expression"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    ]
-                }
-            },
-            {
-                "name": "Get Parameters",
-                "type": "Lookup",
-                "dependsOn": [
-                    {
-                        "activity": "Set Init Variable",
-                        "dependencyConditions": [
-                            "Succeeded"
-                        ]
-                    }
-                ],
-                "policy": {
-                    "timeout": "7.00:00:00",
-                    "retry": 0,
-                    "retryIntervalInSeconds": 30,
-                    "secureOutput": false,
-                    "secureInput": false
-                },
-                "userProperties": [],
-                "typeProperties": {
-                    "source": {
-                        "type": "AzureSqlSource",
-                        "sqlReaderQuery": {
-                            "value": "SELECT distinct Concat('{\"subscriptionId\":\"' + ds.[subscriptionid] + '\"', ',',\n       '\"resourceGroup\":\"' + ds.[resourcegroup] + '\"', ',', \n\t   '\"factoryName\":\"' +  ds.[datafactoryname] + '\"', ',', \n\t   '\"keyvaultName\":\"' + ds.[keyvaultname] +'\"',',',\n       '\"DatabricksWorkspaceUrl\":\"' + ds.[databricksworkspaceurl] + '\"', ',',\n\t   '\"DatabricksWorkspaceId\":\"' + ds.[DatabricksWorkspaceId] + '\"', ',',\n       '\"ClusterNodeType\":\"' + ds.[databricksclusternodetype] + '\"', ',',\n       '\"ClusterVersion\":\"' + ds.[dhdatabricksclusterversion] + '\"', ',',\n       '\"PythonVersion\":\"' + ds.[databrickspythonversion] + '\"', ',',\n       '\"jdbcHostname\":\"' + db.[baseurlsecret] + '\"', ',', \n\t   '\"jdbcDatabase\":\"' + db.[database] + '\"', ',', \n\t   '\"jdbcPort\":\"' + db.[portsecretname] + '\"', ',',\n       '\"database_user\":\"' + db.[usernamesecretname] + '\"', ',',\n       '\"database_password\":\"' + db.[passwordsecretname] + '\"', ',',\n       '\"database_secret_scope\":\"' + db.[databricksscopesecretname] + '\"', ',',\n       '\"defaultDeltaMountLocation\":\"' + td.[deltadatapath] + '\"', ',',\n       '\"TargetTable\":\"' + td.[tablename] + '\"', ',', \n\t   '\"TargetSchema\":\"' +  td.[schema]  + '\"', ',', \n\t   '\"TableId\":\"' +  cast( td.[TableDefinitionId] as nvarchar(10) )   + '\"', ',',\n\t   '\"partitionColumn\":\"' + Isnull(td.[partitionattribute], '') + '\"',',',\n\t   '\"validityColumn\":\"' + Isnull(td.[validityattribute], '') + '\"',',',\n\t   '\"primarykey\":\"' + Isnull(td.[KeyHash], '') + '\"',',',\n       '\"NotebookName\":\"' + m.[notebookname] + '\"', ',',\n       '\"NotebookParams\":\"' + m.[notebookparams] + '\"', ',', \n\t   '\"defaultMdFileLocation\":\"' +  m.[metadatafilepath] + '\"', ',',\n\t    '\"MdFileType\":\"' + m.[sourcetype] + '\"', ',',\n\t   '\"LoadType\":\"' + m.[loadtype] + '\"', ',',\n '\"WriteOption\":\"' + m.[WriteOption] + '\"', ',',\n\t   '\"tenantid\":\"' + db.[tenantid] + '\"', ',',\n       '\"SecretName\":\"' +snk.[connectionstringsecretname])\n       + '\"}' AS ParamJson\nFROM   [config].[mapping] AS m\n       INNER JOIN config.tabledefinition AS td\n               ON m.sinktabledefinitionid = td.tabledefinitionid\n       INNER JOIN config.connections AS snk\n               ON m.sinkconnectionid = snk.connectionid\n       LEFT JOIN [config].[dapservices] AS ds\n              ON 1 = 1\n       LEFT JOIN (SELECT *\n                  FROM   config.connections\n                  WHERE  [system] = 'ciodapdh'\n                         AND connectiontype = 'Database' AND ISActive=1) AS db\n              ON 1 = 1\nWHERE  m.isactive = 1\n       AND m.dapprocess = 'Data Harmonization'\n       AND m.businessunit = '@{pipeline().parameters.SourceSystem}'\n       AND td.[schema] = '@{pipeline().parameters.ProcessingLayer}'",
-                            "type": "Expression"
-                        },
-                        "partitionOption": "None"
-                    },
-                    "dataset": {
-                        "referenceName": "Metadata",
-                        "type": "DatasetReference",
-                        "parameters": {
-                            "SecretName": {
-                                "value": "@variables('Init')",
-                                "type": "Expression"
-                            },
-                            "KeyvaultName": {
-                                "value": "@pipeline().globalParameters.keyvault_name",
-                                "type": "Expression"
-                            }
-                        }
-                    },
-                    "firstRowOnly": false
-                }
-            },
-            {
-                "name": "Initialise",
-                "type": "WebActivity",
-                "dependsOn": [],
-                "policy": {
-                    "timeout": "7.00:00:00",
-                    "retry": 0,
-                    "retryIntervalInSeconds": 30,
-                    "secureOutput": true,
-                    "secureInput": true
-                },
-                "userProperties": [],
-                "typeProperties": {
-                    "url": {
-                        "value": "@concat('https://',pipeline().globalParameters.keyvault_name,'.vault.azure.net/secrets/init/?api-version=7.0' )",
-                        "type": "Expression"
-                    },
-                    "connectVia": {
-                        "referenceName": "IR-NNDAP",
-                        "type": "IntegrationRuntimeReference"
-                    },
-                    "method": "GET",
-                    "authentication": {
-                        "type": "MSI",
-                        "resource": "https://vault.azure.net"
-                    }
-                }
-            },
-            {
-                "name": "Set Init Variable",
-                "type": "SetVariable",
-                "dependsOn": [
-                    {
-                        "activity": "Initialise",
-                        "dependencyConditions": [
-                            "Succeeded"
-                        ]
-                    }
-                ],
-                "userProperties": [],
-                "typeProperties": {
-                    "variableName": "Init",
-                    "value": {
-                        "value": "@activity('Initialise').output.value",
-                        "type": "Expression"
-                    }
-                }
-            }
-        ],
-        "parameters": {
-            "SourceSystem": {
-                "type": "string",
-                "defaultValue": "demo"
-            },
-            "ProcessLogTable": {
-                "type": "string",
-                "defaultValue": "ETL.LOG_FLOW"
-            },
-            "AuditLogTable": {
-                "type": "string",
-                "defaultValue": "LOG.AUDIT"
-            },
-            "DatahubDatabase": {
-                "type": "string",
-                "defaultValue": "AdventureWorks"
-            },
-            "ProcessingLayer": {
-                "type": "string",
-                "defaultValue": "dh"
-            },
-            "SourceSchema": {
-                "type": "string",
-                "defaultValue": "dbrdelta"
-            },
-            "TargetSchema": {
-                "type": "string",
-                "defaultValue": "dh"
-            },
-            "ForceIndexDrop": {
-                "type": "int",
-                "defaultValue": 0
-            },
-            "LoadType": {
-                "type": "string",
-                "defaultValue": "I"
-            },
-            "bulkCopyBatchSize": {
-                "type": "string",
-                "defaultValue": "1000"
-            },
-            "bulkCopyTableLock": {
-                "type": "string",
-                "defaultValue": "true"
-            },
-            "bulkCopyTimeout": {
-                "type": "string",
-                "defaultValue": "60000"
-            },
-            "queryOnly": {
-                "type": "string",
-                "defaultValue": "false"
-            },
-            "shouldChangeIndex": {
-                "type": "int",
-                "defaultValue": 0
-            }
-        },
-        "variables": {
-            "Init": {
-                "type": "String"
-            }
-        },
-        "folder": {
-            "name": "Data Harmonization Component"
-        },
-        "annotations": []
-    }
+	"name": "DQT Conformed Generic",
+	"properties": {
+		"activities": [
+			{
+				"name": "For Each Table",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Parameters').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Notebook_ingestion_to_conform",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "GetDeltaStructure",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Lookup Table Name",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [
+								{
+									"name": "TableName",
+									"value": "@{json(item().ParamJson)}"
+								},
+								{
+									"name": "NotebookName",
+									"value": "@{json(item().ParamJson)}"
+								}
+							],
+							"typeProperties": {
+								"notebookPath": {
+									"value": "@concat('/Shared/Data Harmonization/',json(item().ParamJson).NotebookName)",
+									"type": "Expression"
+								},
+								"baseParameters": {
+									"hostname": {
+										"value": "@json(item().ParamJson).jdbcHostname",
+										"type": "Expression"
+									},
+									"database": {
+										"value": "@json(item().ParamJson).jdbcDatabase",
+										"type": "Expression"
+									},
+									"port": {
+										"value": "@json(item().ParamJson).jdbcPort",
+										"type": "Expression"
+									},
+									"databaseUser": {
+										"value": "@json(item().ParamJson).database_user",
+										"type": "Expression"
+									},
+									"databasePassword": {
+										"value": "@json(item().ParamJson).database_password",
+										"type": "Expression"
+									},
+									"targetTable": {
+										"value": "@json(item().ParamJson).TargetTable",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"databaseSecretScope": {
+										"value": "@json(item().ParamJson).database_secret_scope",
+										"type": "Expression"
+									},
+									"sourceSchema": {
+										"value": "@pipeline().parameters.SourceSchema",
+										"type": "Expression"
+									},
+									"targetSchema": {
+										"value": "@pipeline().parameters.TargetSchema",
+										"type": "Expression"
+									},
+									"loadType": {
+										"value": "@json(item().ParamJson).LoadType",
+										"type": "Expression"
+									},
+									"startTime": {
+										"value": "@activity('Lookup Table Name').output.firstRow.ActivityStartTime",
+										"type": "Expression"
+									},
+									"sourceName": {
+										"value": "@pipeline().parameters.SourceSystem",
+										"type": "Expression"
+									},
+									"bulkCopyBatchSize": {
+										"value": "@pipeline().parameters.bulkCopyBatchSize",
+										"type": "Expression"
+									},
+									"bulkCopyTableLock": {
+										"value": "@pipeline().parameters.bulkCopyTableLock",
+										"type": "Expression"
+									},
+									"bulkCopyTimeout": {
+										"value": "@pipeline().parameters.bulkCopyTimeout",
+										"type": "Expression"
+									},
+									"defaultDeltaMountLocation": {
+										"value": "@json(item().ParamJson).defaultDeltaMountLocation",
+										"type": "Expression"
+									},
+									"defaultMdFileLocation": {
+										"value": "@json(item().ParamJson).defaultMdFileLocation",
+										"type": "Expression"
+									},
+									"queryOnly": {
+										"value": "@pipeline().parameters.queryOnly",
+										"type": "Expression"
+									},
+									"partitionColumn": {
+										"value": "@json(item().ParamJson).partitionColumn",
+										"type": "Expression"
+									},
+									"loadAuditDB": {
+										"value": "@pipeline().parameters.AuditLogTable",
+										"type": "Expression"
+									},
+									"validityColumn": {
+										"value": "@json(item().ParamJson).validitycolumn",
+										"type": "Expression"
+									},
+									"MdFileType": {
+										"value": "@json(item().ParamJson).mdFileType",
+										"type": "Expression"
+									},
+									"PrimaryKey": {
+										"value": "@json(item().ParamJson).primarykey",
+										"type": "Expression"
+									},
+									"tenantId": {
+										"value": "@json(item().ParamJson).tenantid",
+										"type": "Expression"
+									},
+									"DataHubDatabase": {
+										"value": "@pipeline().parameters.DatahubDatabase",
+										"type": "Expression"
+									},
+									"WriteOption": {
+										"value": "@json(item().ParamJson).WriteOption",
+										"type": "Expression"
+									},
+									"deltaStructure": {
+										"value": "@activity('GetDeltaStructure').output.firstRow.DeltaStructure",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_DatabricksJobCluster",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"DatabricksWorkspaceUrl": {
+										"value": "@json(item().ParamJson).DatabricksWorkspaceUrl",
+										"type": "Expression"
+									},
+									"ClusterNodeType": {
+										"value": "@json(item().ParamJson).ClusterNodeType",
+										"type": "Expression"
+									},
+									"ClusterVersion": {
+										"value": "@json(item().ParamJson).ClusterVersion",
+										"type": "Expression"
+									},
+									"PythonVersion": {
+										"value": "@json(item().ParamJson).PythonVersion",
+										"type": "Expression"
+									},
+									"DatabricksWorkspaceId": {
+										"value": "@json(item().ParamJson).DatabricksworkspaceId",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Lookup Table Name",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "ShouldDropIndex",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[CONFIG].[NotebookTable]",
+									"storedProcedureParameters": {
+										"ActivityStartTime": {
+											"type": "String",
+											"value": {
+												"value": "@{concat('utc',utcnow('O'))}",
+												"type": "Expression"
+											}
+										},
+										"ProcessingLayer": {
+											"type": "String",
+											"value": {
+												"value": "@{pipeline().parameters.ProcessingLayer}",
+												"type": "Expression"
+											}
+										},
+										"SourceSystemName": {
+											"type": "String",
+											"value": {
+												"value": "@{pipeline().parameters.SourceSystem}",
+												"type": "Expression"
+											}
+										},
+										"TargetTable": {
+											"type": "String",
+											"value": {
+												"value": "@json(item().ParamJson).TargetTable",
+												"type": "Expression"
+											}
+										},
+										"LoadType": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.LoadType",
+												"type": "Expression"
+											}
+										}
+									},
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Metadata",
+									"type": "DatasetReference",
+									"parameters": {
+										"SecretName": {
+											"value": "@variables('Init')",
+											"type": "Expression"
+										},
+										"KeyvaultName": {
+											"value": "@pipeline().globalParameters.keyvault_name",
+											"type": "Expression"
+										}
+									}
+								},
+								"firstRowOnly": true
+							}
+						},
+						{
+							"name": "ShouldDropIndex",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "LogStartFlow",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(pipeline().parameters.shouldChangeIndex,1)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Drop Index",
+										"type": "Lookup",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "AzureSqlSource",
+												"sqlReaderStoredProcedureName": "[CONFIG].[ChangeIndexes]",
+												"storedProcedureParameters": {
+													"ForceIndexDrop": {
+														"type": "Int32",
+														"value": {
+															"value": "@pipeline().parameters.ForceIndexDrop",
+															"type": "Expression"
+														}
+													},
+													"Pipeline_Name": {
+														"type": "String",
+														"value": {
+															"value": "@pipeline().Pipeline",
+															"type": "Expression"
+														}
+													},
+													"SourceSystemName": {
+														"type": "String",
+														"value": {
+															"value": "@pipeline().parameters.SourceSystem",
+															"type": "Expression"
+														}
+													},
+													"TargetTable": {
+														"type": "String",
+														"value": {
+															"value": "@json(item().ParamJson).TargetTable",
+															"type": "Expression"
+														}
+													},
+													"LoadType": {
+														"type": "String",
+														"value": {
+															"value": "@pipeline().parameters.LoadType",
+															"type": "Expression"
+														}
+													},
+													"ProcessingLayer": {
+														"type": "String",
+														"value": {
+															"value": "@pipeline().parameters.ProcessingLayer",
+															"type": "Expression"
+														}
+													},
+													"OperationType": {
+														"type": "Int32",
+														"value": {
+															"value": "1",
+															"type": "Expression"
+														}
+													},
+													"StartTimeSCD": {
+														"type": "String",
+														"value": {
+															"value": "@concat('utc',utcnow('O'))",
+															"type": "Expression"
+														}
+													}
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"dataset": {
+												"referenceName": "Metadata",
+												"type": "DatasetReference",
+												"parameters": {
+													"SecretName": {
+														"value": "@variables('Init')",
+														"type": "Expression"
+													},
+													"KeyvaultName": {
+														"value": "@pipeline().globalParameters.keyvault_name",
+														"type": "Expression"
+													}
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "ShouldCreateIndex",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Notebook_ingestion_to_conform",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(pipeline().parameters.shouldChangeIndex,1)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Create Index",
+										"type": "Lookup",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "AzureSqlSource",
+												"sqlReaderStoredProcedureName": "[CONFIG].[ChangeIndexes]",
+												"storedProcedureParameters": {
+													"ForceIndexDrop": {
+														"type": "Int32",
+														"value": {
+															"value": "@pipeline().parameters.ForceIndexDrop",
+															"type": "Expression"
+														}
+													},
+													"Pipeline_Name": {
+														"type": "String",
+														"value": {
+															"value": "@pipeline().Pipeline",
+															"type": "Expression"
+														}
+													},
+													"SourceSystemName": {
+														"type": "String",
+														"value": {
+															"value": "@pipeline().parameters.SourceSystem",
+															"type": "Expression"
+														}
+													},
+													"TargetTable": {
+														"type": "String",
+														"value": {
+															"value": "@json(item().ParamJson).TargetTable",
+															"type": "Expression"
+														}
+													},
+													"LoadType": {
+														"type": "String",
+														"value": {
+															"value": "@pipeline().parameters.LoadType",
+															"type": "Expression"
+														}
+													},
+													"ProcessingLayer": {
+														"type": "String",
+														"value": {
+															"value": "@pipeline().parameters.ProcessingLayer",
+															"type": "Expression"
+														}
+													},
+													"OperationType": {
+														"type": "Int32",
+														"value": {
+															"value": "2",
+															"type": "Expression"
+														}
+													},
+													"StartTimeSCD": {
+														"type": "String",
+														"value": {
+															"value": "@activity('Lookup Table Name').output.firstRow.ActivityStartTime",
+															"type": "Expression"
+														}
+													}
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"dataset": {
+												"referenceName": "Metadata",
+												"type": "DatasetReference",
+												"parameters": {
+													"SecretName": {
+														"value": "@variables('Init')",
+														"type": "Expression"
+													},
+													"KeyvaultName": {
+														"value": "@pipeline().globalParameters.keyvault_name",
+														"type": "Expression"
+													}
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "LogStartFlow",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[log].[AuditStart]",
+								"storedProcedureParameters": {
+									"AdfPipelineRunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"TargetTable": {
+										"value": {
+											"value": "@json(item().ParamJson).TargetTable",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('Init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "LogPipelineEnd",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "ShouldCreateIndex",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[log].[AuditEnd]",
+								"storedProcedureParameters": {
+									"AdfPipelineRunId": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"TargetTable": {
+										"value": {
+											"value": "@json(item().ParamJson).TargetTable",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Status": {
+										"value": {
+											"value": "Completed",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('Init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Update DeltaStructure",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "ShouldDropIndex",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[config].[UpdateDerivedColumnsMetadata]",
+								"storedProcedureParameters": {
+									"TableDefinitionID": {
+										"value": {
+											"value": "@json(item().ParamJson).TableId",
+											"type": "Expression"
+										}
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": {
+										"value": "@variables('Init')",
+										"type": "Expression"
+									},
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "GetDeltaStructure",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Update DeltaStructure",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "select DeltaStructure as DeltaStructure from config.TableDefinition\n where TableDefinitionId = @{json(item().ParamJson).TableId}",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Metadata",
+									"type": "DatasetReference",
+									"parameters": {
+										"SecretName": {
+											"value": "@variables('Init')",
+											"type": "Expression"
+										},
+										"KeyvaultName": {
+											"value": "@pipeline().globalParameters.keyvault_name",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get Parameters",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set Init Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT distinct Concat('{\"subscriptionId\":\"' + ds.[subscriptionid] + '\"', ',',\n       '\"resourceGroup\":\"' + ds.[resourcegroup] + '\"', ',', \n\t   '\"factoryName\":\"' +  ds.[datafactoryname] + '\"', ',', \n\t   '\"keyvaultName\":\"' + ds.[keyvaultname] +'\"',',',\n       '\"DatabricksWorkspaceUrl\":\"' + ds.[databricksworkspaceurl] + '\"', ',',\n\t   '\"DatabricksWorkspaceId\":\"' + ds.[DatabricksWorkspaceId] + '\"', ',',\n       '\"ClusterNodeType\":\"' + ds.[databricksclusternodetype] + '\"', ',',\n       '\"ClusterVersion\":\"' + ds.[dhdatabricksclusterversion] + '\"', ',',\n       '\"PythonVersion\":\"' + ds.[databrickspythonversion] + '\"', ',',\n       '\"jdbcHostname\":\"' + db.[baseurlsecret] + '\"', ',', \n\t   '\"jdbcDatabase\":\"' + db.[database] + '\"', ',', \n\t   '\"jdbcPort\":\"' + db.[portsecretname] + '\"', ',',\n       '\"database_user\":\"' + db.[usernamesecretname] + '\"', ',',\n       '\"database_password\":\"' + db.[passwordsecretname] + '\"', ',',\n       '\"database_secret_scope\":\"' + db.[databricksscopesecretname] + '\"', ',',\n       '\"defaultDeltaMountLocation\":\"' + td.[deltadatapath] + '\"', ',',\n       '\"TargetTable\":\"' + td.[tablename] + '\"', ',', \n\t   '\"TargetSchema\":\"' +  td.[schema]  + '\"', ',', \n\t   '\"TableId\":\"' +  cast( td.[TableDefinitionId] as nvarchar(10) )   + '\"', ',',\n\t   '\"partitionColumn\":\"' + Isnull(td.[partitionattribute], '') + '\"',',',\n\t   '\"validityColumn\":\"' + Isnull(td.[validityattribute], '') + '\"',',',\n\t   '\"primarykey\":\"' + Isnull(td.[KeyHash], '') + '\"',',',\n       '\"NotebookName\":\"' + m.[notebookname] + '\"', ',',\n       '\"NotebookParams\":\"' + m.[notebookparams] + '\"', ',', \n\t   '\"defaultMdFileLocation\":\"' +  m.[metadatafilepath] + '\"', ',',\n\t    '\"MdFileType\":\"' + m.[sourcetype] + '\"', ',',\n\t   '\"LoadType\":\"' + m.[loadtype] + '\"', ',',\n '\"WriteOption\":\"' + m.[WriteOption] + '\"', ',',\n\t   '\"tenantid\":\"' + db.[tenantid] + '\"', ',',\n       '\"SecretName\":\"' +snk.[connectionstringsecretname])\n       + '\"}' AS ParamJson\nFROM   [config].[mapping] AS m\n       INNER JOIN config.tabledefinition AS td\n               ON m.sinktabledefinitionid = td.tabledefinitionid\n       INNER JOIN config.connections AS snk\n               ON m.sinkconnectionid = snk.connectionid\n       LEFT JOIN [config].[dapservices] AS ds\n              ON 1 = 1\n       LEFT JOIN (SELECT *\n                  FROM   config.connections\n                  WHERE  [system] = 'ciodapdh'\n                         AND connectiontype = 'Database' AND ISActive=1) AS db\n              ON 1 = 1\nWHERE  m.isactive = 1\n       AND m.dapprocess = 'Data Harmonization'\n       AND m.businessunit = '@{pipeline().parameters.SourceSystem}'\n       AND td.[schema] = '@{pipeline().parameters.ProcessingLayer}'",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"SecretName": {
+								"value": "@variables('Init')",
+								"type": "Expression"
+							},
+							"KeyvaultName": {
+								"value": "@pipeline().globalParameters.keyvault_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Initialise",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',pipeline().globalParameters.keyvault_name,'.vault.azure.net/secrets/init/?api-version=7.0' )",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set Init Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Initialise",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Init",
+					"value": {
+						"value": "@activity('Initialise').output.value",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"SourceSystem": {
+				"type": "string",
+				"defaultValue": "demo"
+			},
+			"ProcessLogTable": {
+				"type": "string",
+				"defaultValue": "ETL.LOG_FLOW"
+			},
+			"AuditLogTable": {
+				"type": "string",
+				"defaultValue": "LOG.AUDIT"
+			},
+			"DatahubDatabase": {
+				"type": "string",
+				"defaultValue": "AdventureWorks"
+			},
+			"ProcessingLayer": {
+				"type": "string",
+				"defaultValue": "dh"
+			},
+			"SourceSchema": {
+				"type": "string",
+				"defaultValue": "dbrdelta"
+			},
+			"TargetSchema": {
+				"type": "string",
+				"defaultValue": "dh"
+			},
+			"ForceIndexDrop": {
+				"type": "int",
+				"defaultValue": 0
+			},
+			"LoadType": {
+				"type": "string",
+				"defaultValue": "I"
+			},
+			"bulkCopyBatchSize": {
+				"type": "string",
+				"defaultValue": "1000"
+			},
+			"bulkCopyTableLock": {
+				"type": "string",
+				"defaultValue": "true"
+			},
+			"bulkCopyTimeout": {
+				"type": "string",
+				"defaultValue": "60000"
+			},
+			"queryOnly": {
+				"type": "string",
+				"defaultValue": "false"
+			},
+			"shouldChangeIndex": {
+				"type": "int",
+				"defaultValue": 0
+			}
+		},
+		"variables": {
+			"Init": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Data Harmonization Component"
+		},
+		"annotations": []
+	}
 }

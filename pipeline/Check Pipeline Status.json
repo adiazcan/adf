@@ -44,10 +44,6 @@
 									"value": "@concat('https://management.azure.com/subscriptions/',json(activity('Get DAP config').output.firstRow.ParamJson).subscriptionId,'/resourceGroups/',json(activity('Get DAP config').output.firstRow.ParamJson).resourceGroup,'/providers/Microsoft.DataFactory/factories/',json(activity('Get DAP config').output.firstRow.ParamJson).factoryName,'/pipelineruns/',pipeline().parameters.PipelineRunId,'?api-version=2018-06-01')",
 									"type": "Expression"
 								},
-								"connectVia": {
-									"referenceName": "IR-NNDAP",
-									"type": "IntegrationRuntimeReference"
-								},
 								"method": "GET",
 								"body": "",
 								"authentication": {

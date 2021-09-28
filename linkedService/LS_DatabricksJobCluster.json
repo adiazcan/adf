@@ -35,10 +35,6 @@
 			"newClusterInitScripts": [
 				"dbfs:/FileStore/cust_inits/dh-init.sh"
 			]
-		},
-		"connectVia": {
-			"referenceName": "IR-NNDAP",
-			"type": "IntegrationRuntimeReference"
 		}
 	}
 }

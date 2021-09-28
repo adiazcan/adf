@@ -37,10 +37,6 @@
 			"newClusterVersion": "@linkedService().ClusterVersion",
 			"newClusterLogDestination": "dbfs:/cluster-logs/adf-nndap-interactive",
 			"newClusterInitScripts": []
-		},
-		"connectVia": {
-			"referenceName": "IR-NNDAP",
-			"type": "IntegrationRuntimeReference"
 		}
 	}
 }

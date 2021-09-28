@@ -197,10 +197,6 @@
 									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SourceUsernameSecret,'/?api-version=7.0')",
 									"type": "Expression"
 								},
-								"connectVia": {
-									"referenceName": "IR-NNDAP",
-									"type": "IntegrationRuntimeReference"
-								},
 								"method": "GET",
 								"authentication": {
 									"type": "MSI",
@@ -224,10 +220,6 @@
 								"url": {
 									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SourceBaseUrlSecret,'/?api-version=7.0')",
 									"type": "Expression"
-								},
-								"connectVia": {
-									"referenceName": "IR-NNDAP",
-									"type": "IntegrationRuntimeReference"
 								},
 								"method": "GET",
 								"authentication": {
@@ -253,10 +245,6 @@
 									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SourceRelativeUrlSecret,'/?api-version=7.0')",
 									"type": "Expression"
 								},
-								"connectVia": {
-									"referenceName": "IR-NNDAP",
-									"type": "IntegrationRuntimeReference"
-								},
 								"method": "GET",
 								"authentication": {
 									"type": "MSI",
@@ -280,10 +268,6 @@
 								"url": {
 									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SinkBaseUrlSecret,'/?api-version=7.0')",
 									"type": "Expression"
-								},
-								"connectVia": {
-									"referenceName": "IR-NNDAP",
-									"type": "IntegrationRuntimeReference"
 								},
 								"method": "GET",
 								"authentication": {

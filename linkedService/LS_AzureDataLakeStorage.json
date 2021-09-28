@@ -10,10 +10,6 @@
 		"type": "AzureBlobFS",
 		"typeProperties": {
 			"url": "@{linkedService().BaseUrl}"
-		},
-		"connectVia": {
-			"referenceName": "IR-NNDAP",
-			"type": "IntegrationRuntimeReference"
 		}
 	}
 }

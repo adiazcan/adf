@@ -20,10 +20,6 @@
 						"value": "@concat('https://management.azure.com/subscriptions/',json(string(pipeline().parameters.DAPServiceConfig)).subscriptionId,'/resourceGroups/',json(string(pipeline().parameters.DAPServiceConfig)).resourceGroup,'/providers/Microsoft.DataFactory/factories/',json(string(pipeline().parameters.DAPServiceConfig)).factoryName,'/pipelineruns/',pipeline().parameters.PipelineRunId,'/queryActivityruns?api-version=2018-06-01')",
 						"type": "Expression"
 					},
-					"connectVia": {
-						"referenceName": "IR-NNDAP",
-						"type": "IntegrationRuntimeReference"
-					},
 					"method": "POST",
 					"headers": {
 						"Content-Type": "application/json"
