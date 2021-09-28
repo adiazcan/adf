@@ -1,0 +1,12 @@
+{
+	"name": "encdata-df",
+	"properties": {
+		"globalParameters": {
+			"keyvault_name": {
+				"type": "string",
+				"value": "encdata-kv"
+			}
+		}
+	},
+	"location": "westeurope"
+}
