@@ -1118,18 +1118,19 @@
 		"parameters": {
 			"FlowId": {
 				"type": "string",
-				"defaultValue": "6"
+				"defaultValue": "3"
 			},
 			"PipelineName": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "SQLDB Extraction"
 			},
 			"Init": {
 				"type": "string",
-				"defaultValue": "sql-nndap-metadata"
+				"defaultValue": "sql-metadata"
 			},
 			"SourceInit": {
 				"type": "string",
-				"defaultValue": "sql-nndap-samplesource"
+				"defaultValue": "sql-samplesource"
 			}
 		},
 		"variables": {
