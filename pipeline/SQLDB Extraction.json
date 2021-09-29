@@ -317,10 +317,6 @@
 									"value": "@concat('https://',item().KeyVaultName,'.vault.azure.net/secrets/',item().SinkBaseUrlSecret,'/?api-version=7.0')",
 									"type": "Expression"
 								},
-								"connectVia": {
-									"referenceName": "IR-NNDAP",
-									"type": "IntegrationRuntimeReference"
-								},
 								"method": "GET",
 								"authentication": {
 									"type": "MSI",
@@ -1139,7 +1135,7 @@
 		"variables": {
 			"init": {
 				"type": "String",
-				"defaultValue": "sql-nndap-metadata"
+				"defaultValue": "sql-metadata"
 			}
 		},
 		"folder": {
