@@ -442,7 +442,8 @@
 											"type": "Expression"
 										}
 									}
-								}
+								},
+								"firstRowOnly": true
 							}
 						},
 						{
@@ -1130,7 +1131,7 @@
 			},
 			"SourceInit": {
 				"type": "string",
-				"defaultValue": "sqldb"
+				"defaultValue": "sql-samplesource"
 			}
 		},
 		"variables": {
