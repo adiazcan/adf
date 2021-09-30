@@ -1131,7 +1131,7 @@
 			},
 			"SourceInit": {
 				"type": "string",
-				"defaultValue": "sql-samplesource"
+				"defaultValue": "sqldb"
 			}
 		},
 		"variables": {
