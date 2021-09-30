@@ -5,7 +5,7 @@
 			"referenceName": "LS_SqlDatabase",
 			"type": "LinkedServiceReference",
 			"parameters": {
-				"Secret": "sql-nndap-metadata",
+				"Secret": "sql-metadata",
 				"KeyvaultName": {
 					"value": "@dataset().KeyvaultName",
 					"type": "Expression"
