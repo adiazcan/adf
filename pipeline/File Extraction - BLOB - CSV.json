@@ -535,7 +535,7 @@
 											"type": "Expression"
 										},
 										"BaseUrl": {
-											"value": "@activity('BaseUrl').output.value",
+											"value": "@activity('SourceBaseUrl').output.value",
 											"type": "Expression"
 										},
 										"KeySecretName": {
