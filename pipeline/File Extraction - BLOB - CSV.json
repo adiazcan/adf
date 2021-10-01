@@ -489,7 +489,7 @@
 										"type": "AzureBlobStorageReadSettings",
 										"recursive": true,
 										"wildcardFileName": {
-											"value": "@{concat(item().FileNamePattern,'*.csv')}",
+											"value": "item().ActualFileName",
 											"type": "Expression"
 										},
 										"enablePartitionDiscovery": false
