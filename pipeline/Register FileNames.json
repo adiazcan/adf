@@ -1,82 +1,86 @@
 {
-    "name": "Register FileNames",
-    "properties": {
-        "activities": [{
-            "name": "ForEach FileName",
-            "type": "ForEach",
-            "dependsOn": [],
-            "userProperties": [],
-            "typeProperties": {
-                "items": {
-                    "value": "@pipeline().parameters.FileNames",
-                    "type": "Expression"
-                },
-                "activities": [{
-                    "name": "Stored procedure1",
-                    "type": "SqlServerStoredProcedure",
-                    "dependsOn": [],
-                    "policy": {
-                        "timeout": "7.00:00:00",
-                        "retry": 0,
-                        "retryIntervalInSeconds": 30,
-                        "secureOutput": false,
-                        "secureInput": false
-                    },
-                    "userProperties": [],
-                    "typeProperties": {
-                        "storedProcedureName": "[log].[Files]",
-                        "storedProcedureParameters": {
-                            "AdfPipelineRunId": {
-                                "value": {
-                                    "value": "@pipeline().parameters.AdfPipelineRunId",
-                                    "type": "Expression"
-                                },
-                                "type": "String"
-                            },
-                            "Filename": {
-                                "value": {
-                                    "value": "@item().name",
-                                    "type": "Expression"
-                                },
-                                "type": "String"
-                            },
-                            "Folder": {
-                                "value": {
-                                    "value": "@pipeline().parameters.Folder",
-                                    "type": "Expression"
-                                },
-                                "type": "String"
-                            }
-                        }
-                    },
-                    "linkedServiceName": {
-                        "referenceName": "LS_SqlDatabase",
-                        "type": "LinkedServiceReference",
-                        "parameters": {
-                            "Secret": "sql-nndap-metadata",
-                            "KeyvaultName": {
-                                "value": "@pipeline().globalParameters.keyvault_name",
-                                "type": "Expression"
-                            }
-                        }
-                    }
-                }]
-            }
-        }],
-        "parameters": {
-            "FileNames": {
-                "type": "array"
-            },
-            "AdfPipelineRunId": {
-                "type": "string"
-            },
-            "Folder": {
-                "type": "string"
-            }
-        },
-        "folder": {
-            "name": "Data Extraction Component"
-        },
-        "annotations": []
-    }
+	"name": "Register FileNames",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach FileName",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FileNames",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Stored procedure1",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[log].[Files]",
+								"storedProcedureParameters": {
+									"AdfPipelineRunId": {
+										"value": {
+											"value": "@pipeline().parameters.AdfPipelineRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Filename": {
+										"value": {
+											"value": "@item().name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Folder": {
+										"value": {
+											"value": "@pipeline().parameters.Folder",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_SqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"Secret": "sql-metadata",
+									"KeyvaultName": {
+										"value": "@pipeline().globalParameters.keyvault_name",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"FileNames": {
+				"type": "array"
+			},
+			"AdfPipelineRunId": {
+				"type": "string"
+			},
+			"Folder": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Data Extraction Component"
+		},
+		"annotations": []
+	}
 }
