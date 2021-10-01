@@ -519,7 +519,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"FileSystem": {
-											"value": "@item().SourceContainer",
+											"value": "@item().FileSystem",
 											"type": "Expression"
 										},
 										"Directory": {
