@@ -486,7 +486,7 @@
 								"source": {
 									"type": "DelimitedTextSource",
 									"storeSettings": {
-										"type": "AzureBlobFSReadSettings",
+										"type": "AzureBlobStorageReadSettings",
 										"recursive": true,
 										"enablePartitionDiscovery": false
 									},
@@ -511,13 +511,9 @@
 							},
 							"inputs": [
 								{
-									"referenceName": "DatalakeLandingCSV",
+									"referenceName": "StorageSourceCSV",
 									"type": "DatasetReference",
 									"parameters": {
-										"BaseUrl": {
-											"value": "@activity('BaseUrl').output.value",
-											"type": "Expression"
-										},
 										"FileSystem": {
 											"value": "@item().FileSystem",
 											"type": "Expression"
@@ -526,16 +522,24 @@
 											"value": "@item().Directory",
 											"type": "Expression"
 										},
-										"Delimiter": {
+										"delimiter": {
 											"value": "@item().Delimiter",
 											"type": "Expression"
 										},
-										"Header": {
+										"header": {
 											"value": "@item().Header",
 											"type": "Expression"
 										},
-										"FileName": {
-											"value": "@item().ActualFilename",
+										"BaseUrl": {
+											"value": "@activity('BaseUrl').output.value",
+											"type": "Expression"
+										},
+										"KeySecretName": {
+											"value": "@{item().SourceAccessKey}",
+											"type": "Expression"
+										},
+										"KeyvaultName": {
+											"value": "@pipeline().globalParameters.keyvault_name",
 											"type": "Expression"
 										}
 									}
