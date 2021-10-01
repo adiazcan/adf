@@ -13,7 +13,7 @@
 			}
 		},
 		"annotations": [],
-		"type": "AzureBlobFS",
+		"type": "AzureBlobStorage",
 		"typeProperties": {
 			"url": "@{linkedService().BaseUrl}",
 			"accountKey": {
