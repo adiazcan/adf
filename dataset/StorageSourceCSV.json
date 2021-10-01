@@ -2,22 +2,8 @@
 	"name": "StorageSourceCSV",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "LS_AzureSourceStorage",
-			"type": "LinkedServiceReference",
-			"parameters": {
-				"BaseUrl": {
-					"value": "@dataset().BaseUrl",
-					"type": "Expression"
-				},
-				"AKVsecretName": {
-					"value": "@dataset().KeySecretName",
-					"type": "Expression"
-				},
-				"KevaultName": {
-					"value": "@dataset().KeyvaultName",
-					"type": "Expression"
-				}
-			}
+			"referenceName": "LS_AzureDataLakeStorage",
+			"type": "LinkedServiceReference"
 		},
 		"parameters": {
 			"FileSystem": {
