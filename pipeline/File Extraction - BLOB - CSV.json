@@ -788,18 +788,19 @@
 		"parameters": {
 			"FlowId": {
 				"type": "string",
-				"defaultValue": "9"
+				"defaultValue": "4"
 			},
 			"PipelineName": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "CSV"
 			},
 			"Init": {
 				"type": "string",
-				"defaultValue": "sql-nndap-metadata"
+				"defaultValue": "sql-metadata"
 			},
 			"SourceInit": {
 				"type": "string",
-				"defaultValue": "sql-nndap-samplesource"
+				"defaultValue": "storageurl"
 			}
 		},
 		"variables": {
