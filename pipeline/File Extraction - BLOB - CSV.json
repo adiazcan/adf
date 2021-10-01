@@ -488,6 +488,10 @@
 									"storeSettings": {
 										"type": "AzureBlobStorageReadSettings",
 										"recursive": true,
+										"wildcardFileName": {
+											"value": "@{concat(item().FileNamePattern,'*.csv')}",
+											"type": "Expression"
+										},
 										"enablePartitionDiscovery": false
 									},
 									"formatSettings": {
@@ -515,7 +519,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"FileSystem": {
-											"value": "@item().FileSystem",
+											"value": "@item().SourceContainer",
 											"type": "Expression"
 										},
 										"Directory": {
