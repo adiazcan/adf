@@ -1,5 +1,6 @@
 {
 	"name": "LS_AzureSourceStorage",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
 	"properties": {
 		"parameters": {
 			"BaseUrl": {
@@ -15,7 +16,7 @@
 		"annotations": [],
 		"type": "AzureBlobStorage",
 		"typeProperties": {
-			"url": "@{linkedService().BaseUrl}",
+			"connectionString": "DefaultEndpointsProtocol=https;AccountName=@{linkedService().BaseUrl};",
 			"accountKey": {
 				"type": "AzureKeyVaultSecret",
 				"store": {
@@ -29,10 +30,11 @@
 					}
 				},
 				"secretName": {
-					"value": "@{linkedService().AKVsecretName}",
+					"value": "@linkedService().AKVsecretName",
 					"type": "Expression"
 				}
-			}
+			},
+			"url": "@{linkedService().BaseUrl}"
 		}
 	}
 }
